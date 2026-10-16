@@ -187,7 +187,7 @@ export default function App() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#EAF3FF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#EEF2FB" />
       <View style={styles.content}>
         <View style={styles.calculatorCard}>
           <View style={styles.header}>
@@ -251,7 +251,7 @@ export default function App() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#EAF3FF",
+    backgroundColor: "#EEF2FB",
     justifyContent: "center",
     paddingHorizontal: 16,
   },
@@ -261,14 +261,14 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   calculatorCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fbfcff",
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: "#D8E7FA",
+    borderColor: "#9bb4d9",
     padding: 18,
-    shadowColor: "#2D5F9E",
+    shadowColor: "#243860",
     shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.32,
+    shadowOpacity: 0.18,
     shadowRadius: 24,
     elevation: 8,
   },
@@ -281,27 +281,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    color: "#183B68",
-    fontSize: 17,
+    color: "#8A94AD",
+    fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 0.4,
+    letterSpacing: 2,
   },
   display: {
     minHeight: 102,
-    justifyContent: "center", // Changed: Centers the ScrollView vertically
-    // REMOVED: alignItems: "flex-end" (This was breaking the scroll boundary)
-    backgroundColor: "#F0F6FF",
+    justifyContent: "center",
+    backgroundColor: "#9d9d9d",
     borderWidth: 1,
-    borderColor: "#D8E7FA",
+    borderColor: "#E1E7F0",
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 14,
-    overflow: "hidden", // Added: Ensures text never clips outside the rounded corners
+    overflow: "hidden",
   },
   result: {
-    color: "#111827",
-    fontWeight: "700",
+    color: "#e7eeff",
+    fontWeight: "600",
     maxWidth: "100%",
   },
   keypad: {
@@ -314,36 +313,34 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     height: 56,
-    borderRadius: 15,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   numberButton: {
-    backgroundColor: "#F4D84A",
+    backgroundColor: "#007bf6",
     borderWidth: 1,
-    borderColor: "#E7C83A",
+    borderColor: "#E1E7F0",
   },
   utilityButton: {
-    backgroundColor: "#D6E7FF",
-    borderWidth: 1,
-    borderColor: "#C3DAF8",
+    backgroundColor: "#8b919e",
   },
   actionButton: {
-    backgroundColor: "#8B5E3C",
+    backgroundColor: "#DCE3F5",
   },
   scientificButton: {
-    backgroundColor: "#F3F7FD",
+    backgroundColor: "#EAEFFB",
     borderWidth: 1,
-    borderColor: "#DCE7F5",
+    borderColor: "#DCE3F5",
   },
   operatorButton: {
-    backgroundColor: "#35A86B",
+    backgroundColor: "#0eeeee",
   },
   equalsButton: {
-    backgroundColor: "#08B4CC",
-    shadowColor: "#08B4CC",
+    backgroundColor: "#3558E0",
+    shadowColor: "#3558E0",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 3,
   },
@@ -352,23 +349,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   numberText: {
-    color: "#111111",
+    color: "#1F2A44",
   },
   utilityText: {
-    color: "#24548D",
+    color: "#4A5A8A",
     fontSize: 18,
   },
   actionText: {
-    color: "#FFFFFF",
+    color: "#4A5A8A",
     fontSize: 17,
   },
   scientificText: {
-    color: "#315A87",
+    color: "#4A5A8A",
     fontSize: 16,
     fontWeight: "600",
   },
   operatorText: {
-    color: "#FFFFFF",
+    color: "#3558E0",
     fontSize: 25,
   },
   equalsText: {
