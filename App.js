@@ -89,12 +89,75 @@ export default function App() {
   return (
     <>
       <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
-        body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #111827; }
-        .calculator { width: 100%; max-width: 340px; background: #312e81; border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-        .display { background: #111827; border-radius: 12px; padding: 20px 16px; text-align: right; margin-bottom: 20px; min-height: 84px; display: flex; flex-direction: column; justify-content: space-between; word-break: break-all; }
-        .previous-operand { color: #94a3b8; font-size: 1rem; min-height: 20px; }
-        .current-operand { color: #f8fafc; font-size: 2.2rem; font-weight: 600; line-height: 1.1; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", sans-serif; }
+       
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #111827;
+
+  background-image:
+    linear-gradient(
+      rgba(17, 24, 39, 0.45),
+      rgba(17, 24, 39, 0.45)
+    ),
+    url("/assets/background.jpg");
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+  padding: 20px;
+}
+
+
+       .calculator {
+  width: 100%;
+  max-width: 360px;
+  background: linear-gradient(145deg, #17232c, #05080b);
+  border: 3px solid #639ac0;
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow:
+    0 0 0 5px #202a32,
+    0 0 25px rgba(91, 163, 211, 0.35);
+}
+        .display {
+  background: #030609;
+  border: 2px solid #639ac0;
+  border-radius: 16px;
+  padding: 22px 16px;
+  text-align: right;
+  margin-bottom: 22px;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.previous-operand {
+  color: #8db9d8;
+  font-size: 0.9rem;
+  font-weight: 400;
+  min-height: 22px;
+  margin-bottom: 8px;
+}
+
+
+.current-operand {
+  color: #ffffff;
+  font-size: 3.2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 1px;
+  min-height: 55px;
+  overflow-wrap: anywhere;
+  text-shadow: 0 0 8px rgba(105, 180, 230, 0.3);
+}
         .keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
         .btn { height: 60px; font-size: 1.25rem; font-weight: 500; border: none; border-radius: 12px; cursor: pointer; transition: filter 0.15s ease, transform 0.05s ease; user-select: none; }
         .btn:active { transform: scale(0.96); }
