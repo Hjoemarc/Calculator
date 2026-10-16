@@ -1,293 +1,163 @@
-
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  StatusBar,
-} from "react-native";
+import React, { useState } from 'react';
 
 export default function App() {
-  const [display, setDisplay] = useState("0");
-  const [firstOperand, setFirstOperand] = useState(null);
-  const [operator, setOperator] = useState(null);
-  const [waitingForSecondOperand, setWaitingForSecondOperand] =
-    useState(false);
-  const [calculation, setCalculation] = useState("");
+  const [calc, setCalc] = useState({
+    current: "0",
+    previous: "",
+    operation: null,
+    resetScreen: false
+  });
 
-  const clear = () => {
-    setDisplay("0");
-    setFirstOperand(null);
-    setOperator(null);
-    setWaitingForSecondOperand(false);
-    setCalculation("");
+  const clear = () => setCalc({ current: "0", previous: "", operation: null, resetScreen: false });
+
+  const del = () => {
+    setCalc(prev => {
+      if (prev.resetScreen || prev.current === "Error") return { ...prev, current: "0", resetScreen: false };
+      return { ...prev, current: prev.current.length === 1 ? "0" : prev.current.slice(0, -1) };
+    });
   };
 
-  const inputDigit = (digit) => {
-    if (display === "Error") {
-      setDisplay(String(digit));
-      setCalculation("");
-      setFirstOperand(null);
-      setOperator(null);
-      setWaitingForSecondOperand(false);
-      return;
-    }
-
-    if (waitingForSecondOperand) {
-      setDisplay(String(digit));
-      setWaitingForSecondOperand(false);
-    } else {
-      setDisplay(display === "0" ? String(digit) : display + digit);
-    }
+  const append = (num) => {
+    setCalc(prev => {
+      if (prev.resetScreen || prev.current === "Error") return { ...prev, current: num, resetScreen: false };
+      if (num === "." && prev.current.includes(".")) return prev;
+      if (prev.current === "0" && num !== ".") return { ...prev, current: num };
+      return { ...prev, current: prev.current + num };
+    });
   };
 
-  const inputDecimal = () => {
-    if (display === "Error") {
-      setDisplay("0.");
-      setCalculation("");
-      setFirstOperand(null);
-      setOperator(null);
-      setWaitingForSecondOperand(false);
-      return;
-    }
+  const chooseOp = (op) => {
+    setCalc(prev => {
+      if (prev.current === "Error") return prev;
+      if (prev.previous !== "" && !prev.resetScreen) {
+        const p = parseFloat(prev.previous);
+        const c = parseFloat(prev.current);
+        let res = 0;
+        if (prev.operation === '+') res = p + c;
+        if (prev.operation === '-') res = p - c;
+        if (prev.operation === '*') res = p * c;
+        if (prev.operation === '/') {
+          if (c === 0) return { current: "Error", previous: "", operation: null, resetScreen: true };
+          res = p / c;
+        }
+        res = Math.round(res * 1e12) / 1e12;
+        return { current: res.toString(), previous: res.toString(), operation: op, resetScreen: true };
+      }
+      return { ...prev, previous: prev.current, operation: op, resetScreen: true };
+    });
+  };
 
-    if (waitingForSecondOperand) {
-      setDisplay("0.");
-      setWaitingForSecondOperand(false);
-      return;
-    }
+  const compute = () => {
+    setCalc(prev => {
+      if (!prev.operation || prev.previous === "") return prev;
+      const p = parseFloat(prev.previous);
+      const c = parseFloat(prev.current);
+      let res = 0;
+      if (prev.operation === '+') res = p + c;
+      if (prev.operation === '-') res = p - c;
+      if (prev.operation === '*') res = p * c;
+      if (prev.operation === '/') {
+        if (c === 0) return { current: "Error", previous: "", operation: null, resetScreen: true };
+        res = p / c;
+      }
+      res = Math.round(res * 1e12) / 1e12;
+      return { current: res.toString(), previous: "", operation: null, resetScreen: true };
+    });
+  };
 
-    if (!display.includes(".")) {
-      setDisplay(display + ".");
-    }
+  const percent = () => {
+    setCalc(prev => {
+      if (prev.current === "Error") return prev;
+      return { ...prev, current: (parseFloat(prev.current) / 100).toString() };
+    });
   };
 
   const toggleSign = () => {
-    if (display === "Error" || display === "0") return;
-
-    setDisplay(
-      display.startsWith("-") ? display.slice(1) : "-" + display
-    );
+    setCalc(prev => {
+      if (prev.current === "Error" || prev.current === "0") return prev;
+      return { ...prev, current: (parseFloat(prev.current) * -1).toString() };
+    });
   };
 
-  const inputPercent = () => {
-    if (display === "Error") return;
-
-    const value = parseFloat(display) / 100;
-    setDisplay(String(value));
+  const formatDisplay = (num) => {
+    if (num === "Error" || num === "") return num;
+    const [integer, decimal] = num.split(".");
+    const intDisplay = isNaN(parseFloat(integer)) ? "" : parseFloat(integer).toLocaleString("en", { maximumFractionDigits: 0 });
+    return decimal != null ? `${intDisplay}.${decimal}` : intDisplay;
   };
-
-  const calculateResult = (left, right, op) => {
-    let result;
-
-    switch (op) {
-      case "+":
-        result = left + right;
-        break;
-      case "-":
-        result = left - right;
-        break;
-      case "*":
-        result = left * right;
-        break;
-      case "/":
-        if (right === 0) return "Error";
-        result = left / right;
-        break;
-      default:
-        return right;
-    }
-
-    if (!Number.isFinite(result)) return "Error";
-
-    return Math.round((result + Number.EPSILON) * 1e10) / 1e10;
-  };
-
-  const performOperation = (nextOperator) => {
-    if (display === "Error") return;
-
-    const inputValue = parseFloat(display);
-
-    // Replace the operator if another operator is pressed.
-    if (waitingForSecondOperand && nextOperator !== "=") {
-      setOperator(nextOperator);
-
-      if (firstOperand !== null) {
-        setCalculation(`${firstOperand} ${nextOperator}`);
-      }
-
-      return;
-    }
-
-    if (firstOperand === null) {
-      setFirstOperand(inputValue);
-
-      if (nextOperator !== "=") {
-        setOperator(nextOperator);
-        setCalculation(`${display} ${nextOperator}`);
-        setWaitingForSecondOperand(true);
-      }
-
-      return;
-    }
-
-    if (operator && nextOperator === "=") {
-      const expression = `${firstOperand} ${operator} ${display} =`;
-      const result = calculateResult(
-        firstOperand,
-        inputValue,
-        operator
-      );
-
-      setCalculation(expression);
-
-      if (result === "Error") {
-        setDisplay("Error");
-        setFirstOperand(null);
-        setOperator(null);
-        setWaitingForSecondOperand(false);
-        return;
-      }
-
-      setDisplay(String(result));
-      setFirstOperand(null);
-      setOperator(null);
-      setWaitingForSecondOperand(true);
-      return;
-    }
-
-    if (operator) {
-      const result = calculateResult(
-        firstOperand,
-        inputValue,
-        operator
-      );
-
-      if (result === "Error") {
-        setDisplay("Error");
-        setFirstOperand(null);
-        setOperator(null);
-        setWaitingForSecondOperand(false);
-        return;
-      }
-
-      setFirstOperand(result);
-      setDisplay(String(result));
-      setOperator(nextOperator);
-      setCalculation(`${result} ${nextOperator}`);
-      setWaitingForSecondOperand(true);
-    }
-  };
-
-  const handleEquals = () => {
-    if (
-      operator !== null &&
-      firstOperand !== null &&
-      !waitingForSecondOperand
-    ) {
-      performOperation("=");
-    }
-  };
-
-  const handlePress = (btn) => {
-    if (btn === "AC") {
-      clear();
-      return;
-    }
-
-    if (display === "Error") {
-      if (!isNaN(Number(btn)) || btn === ".") {
-        if (btn === ".") {
-          setDisplay("0.");
-        } else {
-          setDisplay(btn);
-        }
-
-        setCalculation("");
-        setFirstOperand(null);
-        setOperator(null);
-        setWaitingForSecondOperand(false);
-      }
-
-      return;
-    }
-
-    switch (btn) {
-      case "+/-":
-        toggleSign();
-        break;
-      case "%":
-        inputPercent();
-        break;
-      case ".":
-        inputDecimal();
-        break;
-      case "=":
-        handleEquals();
-        break;
-      case "+":
-      case "-":
-      case "*":
-      case "/":
-        performOperation(btn);
-        break;
-      default:
-        inputDigit(parseInt(btn, 10));
-        break;
-    }
-  };
-
-  const getButtonStyle = (btn) => {
-    if (btn === "AC") return styles.clearButton;
-
-    if (btn === "+/-" || btn === "%") {
-      return styles.utilityButton;
-    }
-
-    if (btn === "=") return styles.equalsButton;
-
-    if (["/", "*", "-", "+"].includes(btn)) {
-      return styles.operatorButton;
-    }
-
-    return styles.numberButton;
-  };
-
-  const getTextStyle = (btn) => {
-    if (btn === "AC") return styles.clearText;
-
-    if (btn === "+/-" || btn === "%") {
-      return styles.utilityText;
-    }
-
-    if (btn === "=") return styles.equalsText;
-
-    if (["/", "*", "-", "+"].includes(btn)) {
-      return styles.operatorText;
-    }
-
-    return styles.numberText;
-  };
-
-  const rows = [
-    ["AC", "+/-", "%", "/"],
-    ["7", "8", "9", "*"],
-    ["4", "5", "6", "-"],
-    ["1", "2", "3", "+"],
-    ["0", ".", "="],
-  ];
 
   return (
     <>
       <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
-        body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #111827; }
-        .calculator { width: 100%; max-width: 340px; background: #312e81; border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-        .app-header { text-align: center; color: #38bdf8; font-size: 0.95rem; font-weight: 600; margin-bottom: 16px; letter-spacing: 0.5px; }
-        .display { background: #111827; border-radius: 12px; padding: 20px 16px; text-align: right; margin-bottom: 20px; min-height: 84px; display: flex; flex-direction: column; justify-content: space-between; word-break: break-all; }
-        .previous-operand { color: #94a3b8; font-size: 1rem; min-height: 20px; }
-        .current-operand { color: #f8fafc; font-size: 2.2rem; font-weight: 600; line-height: 1.1; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", sans-serif; }
+       
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #111827;
+
+  background-image:
+    linear-gradient(
+      rgba(17, 24, 39, 0.45),
+      rgba(17, 24, 39, 0.45)
+    ),
+    url("/assets/background.jpg");
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+  padding: 20px;
+}
+
+
+       .calculator {
+  width: 100%;
+  max-width: 360px;
+  background: linear-gradient(145deg, #17232c, #05080b);
+  border: 3px solid #639ac0;
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow:
+    0 0 0 5px #202a32,
+    0 0 25px rgba(91, 163, 211, 0.35);
+}
+        .display {
+  background: #030609;
+  border: 2px solid #639ac0;
+  border-radius: 16px;
+  padding: 22px 16px;
+  text-align: right;
+  margin-bottom: 22px;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.previous-operand {
+  color: #8db9d8;
+  font-size: 0.9rem;
+  font-weight: 400;
+  min-height: 22px;
+  margin-bottom: 8px;
+}
+
+
+.current-operand {
+  color: #ffffff;
+  font-size: 3.2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 1px;
+  min-height: 55px;
+  overflow-wrap: anywhere;
+  text-shadow: 0 0 8px rgba(105, 180, 230, 0.3);
+}
         .keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
         .btn { height: 60px; font-size: 1.25rem; font-weight: 500; border: none; border-radius: 12px; cursor: pointer; transition: filter 0.15s ease, transform 0.05s ease; user-select: none; }
         .btn:active { transform: scale(0.96); }
@@ -299,7 +169,6 @@ export default function App() {
       `}</style>
 
       <div className="calculator" style={{ backgroundColor: "#2f72ca" }}>
-        <div className="app-header">Calculator By Danica Mae T. Radovan</div>
         <div className="display">
           <div className="previous-operand">
             {formatDisplay(calc.previous)} {calc.operation && calc.operation.replace('*', '×').replace('/', '÷')}
