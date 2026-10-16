@@ -1,90 +1,282 @@
-import React, { useState } from 'react';
+
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  StatusBar,
+} from "react-native";
 
 export default function App() {
-  const [calc, setCalc] = useState({
-    current: "0",
-    previous: "",
-    operation: null,
-    resetScreen: false
-  });
+  const [display, setDisplay] = useState("0");
+  const [firstOperand, setFirstOperand] = useState(null);
+  const [operator, setOperator] = useState(null);
+  const [waitingForSecondOperand, setWaitingForSecondOperand] =
+    useState(false);
+  const [calculation, setCalculation] = useState("");
 
-  const clear = () => setCalc({ current: "0", previous: "", operation: null, resetScreen: false });
-
-  const del = () => {
-    setCalc(prev => {
-      if (prev.resetScreen || prev.current === "Error") return { ...prev, current: "0", resetScreen: false };
-      return { ...prev, current: prev.current.length === 1 ? "0" : prev.current.slice(0, -1) };
-    });
+  const clear = () => {
+    setDisplay("0");
+    setFirstOperand(null);
+    setOperator(null);
+    setWaitingForSecondOperand(false);
+    setCalculation("");
   };
 
-  const append = (num) => {
-    setCalc(prev => {
-      if (prev.resetScreen || prev.current === "Error") return { ...prev, current: num, resetScreen: false };
-      if (num === "." && prev.current.includes(".")) return prev;
-      if (prev.current === "0" && num !== ".") return { ...prev, current: num };
-      return { ...prev, current: prev.current + num };
-    });
+  const inputDigit = (digit) => {
+    if (display === "Error") {
+      setDisplay(String(digit));
+      setCalculation("");
+      setFirstOperand(null);
+      setOperator(null);
+      setWaitingForSecondOperand(false);
+      return;
+    }
+
+    if (waitingForSecondOperand) {
+      setDisplay(String(digit));
+      setWaitingForSecondOperand(false);
+    } else {
+      setDisplay(display === "0" ? String(digit) : display + digit);
+    }
   };
 
-  const chooseOp = (op) => {
-    setCalc(prev => {
-      if (prev.current === "Error") return prev;
-      if (prev.previous !== "" && !prev.resetScreen) {
-        const p = parseFloat(prev.previous);
-        const c = parseFloat(prev.current);
-        let res = 0;
-        if (prev.operation === '+') res = p + c;
-        if (prev.operation === '-') res = p - c;
-        if (prev.operation === '*') res = p * c;
-        if (prev.operation === '/') {
-          if (c === 0) return { current: "Error", previous: "", operation: null, resetScreen: true };
-          res = p / c;
-        }
-        res = Math.round(res * 1e12) / 1e12;
-        return { current: res.toString(), previous: res.toString(), operation: op, resetScreen: true };
-      }
-      return { ...prev, previous: prev.current, operation: op, resetScreen: true };
-    });
-  };
+  const inputDecimal = () => {
+    if (display === "Error") {
+      setDisplay("0.");
+      setCalculation("");
+      setFirstOperand(null);
+      setOperator(null);
+      setWaitingForSecondOperand(false);
+      return;
+    }
 
-  const compute = () => {
-    setCalc(prev => {
-      if (!prev.operation || prev.previous === "") return prev;
-      const p = parseFloat(prev.previous);
-      const c = parseFloat(prev.current);
-      let res = 0;
-      if (prev.operation === '+') res = p + c;
-      if (prev.operation === '-') res = p - c;
-      if (prev.operation === '*') res = p * c;
-      if (prev.operation === '/') {
-        if (c === 0) return { current: "Error", previous: "", operation: null, resetScreen: true };
-        res = p / c;
-      }
-      res = Math.round(res * 1e12) / 1e12;
-      return { current: res.toString(), previous: "", operation: null, resetScreen: true };
-    });
-  };
+    if (waitingForSecondOperand) {
+      setDisplay("0.");
+      setWaitingForSecondOperand(false);
+      return;
+    }
 
-  const percent = () => {
-    setCalc(prev => {
-      if (prev.current === "Error") return prev;
-      return { ...prev, current: (parseFloat(prev.current) / 100).toString() };
-    });
+    if (!display.includes(".")) {
+      setDisplay(display + ".");
+    }
   };
 
   const toggleSign = () => {
-    setCalc(prev => {
-      if (prev.current === "Error" || prev.current === "0") return prev;
-      return { ...prev, current: (parseFloat(prev.current) * -1).toString() };
-    });
+    if (display === "Error" || display === "0") return;
+
+    setDisplay(
+      display.startsWith("-") ? display.slice(1) : "-" + display
+    );
   };
 
-  const formatDisplay = (num) => {
-    if (num === "Error" || num === "") return num;
-    const [integer, decimal] = num.split(".");
-    const intDisplay = isNaN(parseFloat(integer)) ? "" : parseFloat(integer).toLocaleString("en", { maximumFractionDigits: 0 });
-    return decimal != null ? `${intDisplay}.${decimal}` : intDisplay;
+  const inputPercent = () => {
+    if (display === "Error") return;
+
+    const value = parseFloat(display) / 100;
+    setDisplay(String(value));
   };
+
+  const calculateResult = (left, right, op) => {
+    let result;
+
+    switch (op) {
+      case "+":
+        result = left + right;
+        break;
+      case "-":
+        result = left - right;
+        break;
+      case "*":
+        result = left * right;
+        break;
+      case "/":
+        if (right === 0) return "Error";
+        result = left / right;
+        break;
+      default:
+        return right;
+    }
+
+    if (!Number.isFinite(result)) return "Error";
+
+    return Math.round((result + Number.EPSILON) * 1e10) / 1e10;
+  };
+
+  const performOperation = (nextOperator) => {
+    if (display === "Error") return;
+
+    const inputValue = parseFloat(display);
+
+    // Replace the operator if another operator is pressed.
+    if (waitingForSecondOperand && nextOperator !== "=") {
+      setOperator(nextOperator);
+
+      if (firstOperand !== null) {
+        setCalculation(`${firstOperand} ${nextOperator}`);
+      }
+
+      return;
+    }
+
+    if (firstOperand === null) {
+      setFirstOperand(inputValue);
+
+      if (nextOperator !== "=") {
+        setOperator(nextOperator);
+        setCalculation(`${display} ${nextOperator}`);
+        setWaitingForSecondOperand(true);
+      }
+
+      return;
+    }
+
+    if (operator && nextOperator === "=") {
+      const expression = `${firstOperand} ${operator} ${display} =`;
+      const result = calculateResult(
+        firstOperand,
+        inputValue,
+        operator
+      );
+
+      setCalculation(expression);
+
+      if (result === "Error") {
+        setDisplay("Error");
+        setFirstOperand(null);
+        setOperator(null);
+        setWaitingForSecondOperand(false);
+        return;
+      }
+
+      setDisplay(String(result));
+      setFirstOperand(null);
+      setOperator(null);
+      setWaitingForSecondOperand(true);
+      return;
+    }
+
+    if (operator) {
+      const result = calculateResult(
+        firstOperand,
+        inputValue,
+        operator
+      );
+
+      if (result === "Error") {
+        setDisplay("Error");
+        setFirstOperand(null);
+        setOperator(null);
+        setWaitingForSecondOperand(false);
+        return;
+      }
+
+      setFirstOperand(result);
+      setDisplay(String(result));
+      setOperator(nextOperator);
+      setCalculation(`${result} ${nextOperator}`);
+      setWaitingForSecondOperand(true);
+    }
+  };
+
+  const handleEquals = () => {
+    if (
+      operator !== null &&
+      firstOperand !== null &&
+      !waitingForSecondOperand
+    ) {
+      performOperation("=");
+    }
+  };
+
+  const handlePress = (btn) => {
+    if (btn === "AC") {
+      clear();
+      return;
+    }
+
+    if (display === "Error") {
+      if (!isNaN(Number(btn)) || btn === ".") {
+        if (btn === ".") {
+          setDisplay("0.");
+        } else {
+          setDisplay(btn);
+        }
+
+        setCalculation("");
+        setFirstOperand(null);
+        setOperator(null);
+        setWaitingForSecondOperand(false);
+      }
+
+      return;
+    }
+
+    switch (btn) {
+      case "+/-":
+        toggleSign();
+        break;
+      case "%":
+        inputPercent();
+        break;
+      case ".":
+        inputDecimal();
+        break;
+      case "=":
+        handleEquals();
+        break;
+      case "+":
+      case "-":
+      case "*":
+      case "/":
+        performOperation(btn);
+        break;
+      default:
+        inputDigit(parseInt(btn, 10));
+        break;
+    }
+  };
+
+  const getButtonStyle = (btn) => {
+    if (btn === "AC") return styles.clearButton;
+
+    if (btn === "+/-" || btn === "%") {
+      return styles.utilityButton;
+    }
+
+    if (btn === "=") return styles.equalsButton;
+
+    if (["/", "*", "-", "+"].includes(btn)) {
+      return styles.operatorButton;
+    }
+
+    return styles.numberButton;
+  };
+
+  const getTextStyle = (btn) => {
+    if (btn === "AC") return styles.clearText;
+
+    if (btn === "+/-" || btn === "%") {
+      return styles.utilityText;
+    }
+
+    if (btn === "=") return styles.equalsText;
+
+    if (["/", "*", "-", "+"].includes(btn)) {
+      return styles.operatorText;
+    }
+
+    return styles.numberText;
+  };
+
+  const rows = [
+    ["AC", "+/-", "%", "/"],
+    ["7", "8", "9", "*"],
+    ["4", "5", "6", "-"],
+    ["1", "2", "3", "+"],
+    ["0", ".", "="],
+  ];
 
   return (
     <>
@@ -107,7 +299,7 @@ export default function App() {
       `}</style>
 
       <div className="calculator">
-        <div className="app-header">Calculator by Danica Mae T. Radovan</div>
+        <div className="app-header">Calculator By Danica Mae T. Radovan</div>
         <div className="display">
           <div className="previous-operand">
             {formatDisplay(calc.previous)} {calc.operation && calc.operation.replace('*', '×').replace('/', '÷')}
