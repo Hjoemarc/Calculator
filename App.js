@@ -1,549 +1,703 @@
-import React, { useState, useRef } from "react";
+
+import React, { useState } from "react";
 import {
-  StatusBar,
-  StyleSheet,
+  View,
   Text,
   TouchableOpacity,
-  View,
-  ScrollView,
-  Modal,
-  FlatList,
+  StyleSheet,
+  StatusBar,
 } from "react-native";
 
-const BUTTON_ROWS = [
-  ["√", "x²", "1/x", "ANS"],
-  ["AC", "DEL", "%", "÷"],
-  ["7", "8", "9", "×"],
-  ["4", "5", "6", "−"],
-  ["1", "2", "3", "+"],
-  ["±", "0", ".", "="],
-];
-
-const OPERATORS = {
-  "÷": "/",
-  "×": "*",
-  "−": "-",
-  "+": "+",
+// Design update by June Mark C. Undik:
+// Changed the original orange and green theme to a modern
+// dark navy and electric blue color scheme.
+const COLORS = {
+  background: "#0B1020",
+  card: "#151D32",
+  number: "#202B45",
+  operator: "#2563EB",
+  accent: "#38BDF8",
+  text: "#F8FAFC",
+  secondary: "#8492AC",
+  clear: "#3A2335",
+  function: "#293650",
 };
 
+// Original calculator buttons retained.
+// The updated design uses different colors and rounded buttons.
+const BUTTONS = [
+  [
+    { label: "AC", value: "AC", type: "clear" },
+    { label: "+/-", value: "+/-", type: "function" },
+    { label: "%", value: "%", type: "function" },
+    { label: "÷", value: "/", type: "operator" },
+  ],
+  [
+    { label: "7", value: "7" },
+    { label: "8", value: "8" },
+    { label: "9", value: "9" },
+    { label: "×", value: "*", type: "operator" },
+  ],
+  [
+    { label: "4", value: "4" },
+    { label: "5", value: "5" },
+    { label: "6", value: "6" },
+    { label: "−", value: "-", type: "operator" },
+  ],
+  [
+    { label: "1", value: "1" },
+    { label: "2", value: "2" },
+    { label: "3", value: "3" },
+    { label: "+", value: "+", type: "operator" },
+  ],
+  [
+    { label: "0", value: "0", wide: true },
+    { label: ".", value: "." },
+    { label: "=", value: "=", type: "equals" },
+  ],
+];
+
 export default function App() {
-  const [equation, setEquation] = useState("0");
-  const [evaluated, setEvaluated] = useState(false);
-  const [lastAnswer, setLastAnswer] = useState("0");
-  const [history, setHistory] = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
-  const scrollRef = useRef(null);
+  const [display, setDisplay] = useState("0");
+  const [firstOperand, setFirstOperand] = useState(null);
+  const [operator, setOperator] = useState(null);
+  const [waitingForSecondOperand, setWaitingForSecondOperand] =
+    useState(false);
+  const [calculation, setCalculation] = useState("");
 
+  // Original clear function retained.
   const clear = () => {
-    setEquation("0");
-    setEvaluated(false);
+    setDisplay("0");
+    setFirstOperand(null);
+    setOperator(null);
+    setWaitingForSecondOperand(false);
+    setCalculation("");
   };
 
-  const deleteDigit = () => {
-    if (evaluated || equation === "Error") {
-      setEquation("0");
-      setEvaluated(false);
+  const inputDigit = (digit) => {
+    if (display === "Error") {
+      clear();
+      setDisplay(String(digit));
       return;
     }
-    setEquation((prev) => (prev.length === 1 ? "0" : prev.slice(0, -1)));
-  };
 
-  const appendDigit = (num) => {
-    if (evaluated || equation === "Error") {
-      setEquation(num === "." ? "0." : num);
-      setEvaluated(false);
-      return;
-    }
-    setEquation((prev) => {
-      if (num === ".") {
-        const match = prev.match(/(\d+\.?\d*)$/);
-        if (match && match[0].includes(".")) return prev;
-      }
-      if (prev === "0" && num !== ".") return num;
-      return prev + num;
-    });
-  };
-
-  const chooseOp = (op) => {
-    if (equation === "Error") return;
-    setEvaluated(false);
-    setEquation((prev) => {
-      const lastChar = prev.slice(-1);
-      if (["+", "-", "*", "/"].includes(lastChar)) {
-        return prev.slice(0, -1) + op;
-      }
-      return prev + op;
-    });
-  };
-
-  const addToHistory = (expr, res) => {
-    const newItem = {
-      id: Date.now().toString(),
-      expression: formatDisplay(expr),
-      result: formatDisplay(res),
-    };
-    setHistory((prev) => [newItem, ...prev]);
-  };
-
-  const applyUnary = (operation) => {
-    if (equation === "Error") return;
-    try {
-      let mathExpr = equation;
-      if (["+", "-", "*", "/"].includes(mathExpr.slice(-1))) {
-        mathExpr = mathExpr.slice(0, -1);
-      }
-      // eslint-disable-next-line no-eval
-      let val = eval(mathExpr);
-      let res = 0;
-
-      let exprLabel = `${operation}(${mathExpr})`;
-      if (operation === "%") {
-        res = val / 100;
-        exprLabel = `${mathExpr}%`;
-      } else if (operation === "±") {
-        res = val * -1;
-        exprLabel = `neg(${mathExpr})`;
-      } else if (operation === "√") res = Math.sqrt(val);
-      else if (operation === "x²") {
-        res = val * val;
-        exprLabel = `${mathExpr}²`;
-      } else if (operation === "1/x") {
-        res = 1 / val;
-        exprLabel = `1/${mathExpr}`;
-      }
-
-      if (!isFinite(res) || isNaN(res)) {
-        setEquation("Error");
-        return;
-      }
-
-      res = Math.round(res * 1e10) / 1e10;
-      addToHistory(exprLabel, res.toString());
-      setEquation(res.toString());
-      setLastAnswer(res.toString());
-      setEvaluated(true);
-    } catch (e) {
-      setEquation("Error");
-    }
-  };
-
-  const compute = () => {
-    if (equation === "Error") return;
-    try {
-      let mathExpr = equation;
-      if (["+", "-", "*", "/"].includes(mathExpr.slice(-1))) {
-        mathExpr = mathExpr.slice(0, -1);
-      }
-      // eslint-disable-next-line no-eval
-      let res = eval(mathExpr);
-
-      if (!isFinite(res) || isNaN(res)) {
-        setEquation("Error");
-        return;
-      }
-
-      const originalExpr = equation;
-      res = Math.round(res * 1e10) / 1e10;
-      addToHistory(originalExpr, res.toString());
-
-      setEquation(res.toString());
-      setLastAnswer(res.toString());
-      setEvaluated(true);
-    } catch (e) {
-      setEquation("Error");
-    }
-  };
-
-  const appendAns = () => {
-    if (evaluated || equation === "Error" || equation === "0") {
-      setEquation(lastAnswer);
-      setEvaluated(false);
+    if (waitingForSecondOperand) {
+      setDisplay(String(digit));
+      setWaitingForSecondOperand(false);
     } else {
-      setEquation((prev) => prev + lastAnswer);
+      setDisplay(display === "0" ? String(digit) : display + digit);
     }
   };
 
-  const handlePress = (label) => {
-    if (label === "AC") clear();
-    else if (label === "DEL") deleteDigit();
-    else if (label === "=") compute();
-    else if (label === "ANS") appendAns();
-    else if (["%", "±", "√", "x²", "1/x"].includes(label)) applyUnary(label);
-    else if (OPERATORS[label]) chooseOp(OPERATORS[label]);
-    else appendDigit(label);
+  const inputDecimal = () => {
+    if (display === "Error" || waitingForSecondOperand) {
+      setDisplay("0.");
+      setWaitingForSecondOperand(false);
+      return;
+    }
+
+    if (!display.includes(".")) {
+      setDisplay(display + ".");
+    }
   };
 
-  const formatDisplay = (expr) => {
-    if (expr === "Error") return expr;
-    let formatted = expr.replace(/\d+\.?\d*/g, (match) => {
-      const [integer, decimal] = match.split(".");
-      if (!integer) return match;
-      const intDisplay = parseInt(integer, 10).toLocaleString("en");
-      return decimal !== undefined ? `${intDisplay}.${decimal}` : intDisplay;
-    });
-    return formatted.replace(/\*/g, "×").replace(/\//g, "÷").replace(/-/g, "−");
+  const toggleSign = () => {
+    if (display === "Error" || display === "0") return;
+
+    setDisplay(
+      display.startsWith("-") ? display.slice(1) : "-" + display
+    );
   };
 
-  const buttonStyle = (label) => {
-    if (["AC", "DEL", "ANS"].includes(label)) return styles.actionButton;
-    if (["√", "x²", "1/x"].includes(label)) return styles.scientificButton;
-    if (label === "=") return styles.equalsButton;
-    if (Object.prototype.hasOwnProperty.call(OPERATORS, label)) {
-      return styles.operatorButton;
-    }
-    if (label === "%" || label === "±") return styles.utilityButton;
-    return styles.numberButton;
+  const inputPercent = () => {
+    if (display === "Error") return;
+
+    setDisplay(String(parseFloat(display) / 100));
   };
 
-  const buttonTextStyle = (label) => {
-    if (label === "=") return styles.equalsText;
-    if (["AC", "DEL", "ANS"].includes(label)) return styles.actionText;
-    if (Object.prototype.hasOwnProperty.call(OPERATORS, label)) {
-      return styles.operatorText;
+  const calculateResult = (left, right, op) => {
+    let result;
+
+    switch (op) {
+      case "+":
+        result = left + right;
+        break;
+      case "-":
+        result = left - right;
+        break;
+      case "*":
+        result = left * right;
+        break;
+      case "/":
+        if (right === 0) return "Error";
+        result = left / right;
+        break;
+      default:
+        return right;
     }
-    if (["√", "x²", "1/x", "ANS"].includes(label)) {
-      return styles.scientificText;
-    }
-    if (label === "AC" || label === "DEL" || label === "%" || label === "±") {
-      return styles.utilityText;
-    }
-    return styles.numberText;
+
+    if (!Number.isFinite(result)) return "Error";
+
+    return (
+      Math.round((result + Number.EPSILON) * 1e10) / 1e10
+    );
   };
 
-  const displayFontSize = equation.length > 10 ? 34 : equation.length > 7 ? 42 : 52;
+  const performOperation = (nextOperator) => {
+    if (display === "Error") return;
+
+    const inputValue = parseFloat(display);
+
+    // Replace the operator if another operator is pressed.
+    if (waitingForSecondOperand && nextOperator !== "=") {
+      setOperator(nextOperator);
+
+      if (firstOperand !== null) {
+        setCalculation(`${firstOperand} ${nextOperator}`);
+      }
+      return;
+    }
+
+    if (firstOperand === null) {
+      if (nextOperator !== "=") {
+        setFirstOperand(inputValue);
+        setOperator(nextOperator);
+        setCalculation(`${display} ${nextOperator}`);
+        setWaitingForSecondOperand(true);
+      }
+      return;
+    }
+
+    if (operator && nextOperator === "=") {
+      const expression =
+        `${firstOperand} ${operator} ${display} =`;
+
+      const result = calculateResult(
+        firstOperand,
+        inputValue,
+        operator
+      );
+
+      setCalculation(expression);
+
+      if (result === "Error") {
+        setDisplay("Error");
+        setFirstOperand(null);
+        setOperator(null);
+        setWaitingForSecondOperand(false);
+        return;
+      }
+
+      setDisplay(String(result));
+      setFirstOperand(null);
+      setOperator(null);
+      setWaitingForSecondOperand(true);
+      return;
+    }
+
+    if (operator) {
+      const result = calculateResult(
+        firstOperand,
+        inputValue,
+        operator
+      );
+
+      if (result === "Error") {
+        setDisplay("Error");
+        setFirstOperand(null);
+        setOperator(null);
+        setWaitingForSecondOperand(false);
+        return;
+      }
+
+      setFirstOperand(result);
+      setDisplay(String(result));
+      setOperator(nextOperator);
+      setCalculation(`${result} ${nextOperator}`);
+      setWaitingForSecondOperand(true);
+    }
+  };
+
+  const handleEquals = () => {
+    if (
+      operator !== null &&
+      firstOperand !== null &&
+      !waitingForSecondOperand
+    ) {
+      performOperation("=");
+    }
+  };
+
+  const handlePress = (btn) => {
+    if (btn === "AC") {
+      clear();
+      return;
+    }
+
+    if (display === "Error") {
+      if (/^\d$/.test(btn)) {
+        clear();
+        setDisplay(btn);
+      } else if (btn === ".") {
+        clear();
+        setDisplay("0.");
+      }
+      return;
+    }
+
+    if (/^\d$/.test(btn)) {
+      inputDigit(btn);
+      return;
+    }
+
+    switch (btn) {
+      case "+/-":
+        toggleSign();
+        break;
+      case "%":
+        inputPercent();
+        break;
+      case ".":
+        inputDecimal();
+        break;
+      case "=":
+        handleEquals();
+        break;
+      case "+":
+      case "-":
+      case "*":
+      case "/":
+        performOperation(btn);
+        break;
+    }
+  };
+
+  // Design update by June Mark C. Undik:
+  // Formats long numbers so they fit inside the display.
+  const formatDisplay = (value) => {
+    if (value === "Error") return value;
+
+    if (value.length > 13) {
+      return Number(value).toExponential(5);
+    }
+
+    return value;
+  };
+
+  // Design update by June Mark C. Undik:
+  // Updated button colors and text styles to match the new theme.
+  const renderButton = (button) => {
+    let backgroundColor = COLORS.number;
+
+    if (button.type === "clear") {
+      backgroundColor = COLORS.clear;
+    } else if (button.type === "function") {
+      backgroundColor = COLORS.function;
+    } else if (button.type === "operator") {
+      backgroundColor = COLORS.operator;
+    } else if (button.type === "equals") {
+      backgroundColor = COLORS.accent;
+    }
+
+    return (
+      <TouchableOpacity
+        key={button.value}
+        activeOpacity={0.65}
+        onPress={() => handlePress(button.value)}
+        style={[
+          styles.button,
+          { backgroundColor },
+          button.wide && styles.wideButton,
+        ]}
+      >
+        <Text
+          style={[
+            styles.buttonText,
+            button.type === "clear" && styles.clearText,
+            button.type === "function" && styles.functionText,
+            button.type === "operator" && styles.operatorText,
+            button.type === "equals" && styles.equalsText,
+          ]}
+        >
+          {button.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#EEF2FB" />
-      <View style={styles.content}>
-        <View style={styles.calculatorCard}>
-          <View style={styles.header}>
-            <View style={styles.heading}>
-              <Text style={styles.title}>CALCULATOR</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.historyButton}
-              onPress={() => setShowHistory(true)}
-              activeOpacity={0.75}
-              accessibilityRole="button"
-              accessibilityLabel="View History"
-            >
-              <Text style={styles.historyButtonText}>History</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={COLORS.background}
+      />
 
-          <View style={styles.display}>
-            <ScrollView
-              horizontal
-              ref={scrollRef}
-              showsHorizontalScrollIndicator={false}
-              style={{ width: "100%" }}
-              onContentSizeChange={() =>
-                scrollRef.current?.scrollToEnd({ animated: true })
-              }
-              contentContainerStyle={{
-                flexGrow: 1,
-                justifyContent: "flex-end",
-                alignItems: "center",
-              }}
-            >
-              <Text
-                style={[styles.result, { fontSize: displayFontSize }]}
-                numberOfLines={1}
-                accessibilityRole="text"
-                accessibilityLabel={`Display ${equation}`}
-              >
-                {formatDisplay(equation)}
-              </Text>
-            </ScrollView>
-          </View>
+      {/* Design update by June Mark C. Undik:
+          Redesigned the header with a new title, subtitle, and icon. */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.appLabel}>SMART TOOLS  /  01</Text>
+          <Text style={styles.heading}>Calculator</Text>
+          <Text style={styles.subtitle}>
+            Simple calculations, made easy.
+          </Text>
+        </View>
 
-          <View style={styles.keypad}>
-            {BUTTON_ROWS.map((row, rowIndex) => (
-              <View style={styles.buttonRow} key={`row-${rowIndex}`}>
-                {row.map((label) => (
-                  <TouchableOpacity
-                    key={label}
-                    activeOpacity={0.72}
-                    accessibilityRole="button"
-                    accessibilityLabel={label === "DEL" ? "Delete" : label}
-                    onPress={() => handlePress(label)}
-                    style={[styles.button, buttonStyle(label)]}
-                  >
-                    <Text style={[styles.buttonText, buttonTextStyle(label)]}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ))}
-          </View>
+        <View style={styles.iconCircle}>
+          <Text style={styles.iconText}>✳</Text>
         </View>
       </View>
 
-      {/* History Modal */}
-      <Modal
-        visible={showHistory}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowHistory(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Calculation History</Text>
-              <TouchableOpacity onPress={() => setShowHistory(false)}>
-                <Text style={styles.closeButtonText}>✕ Close</Text>
-              </TouchableOpacity>
-            </View>
-
-            {history.length === 0 ? (
-              <View style={styles.emptyHistory}>
-                <Text style={styles.emptyHistoryText}>No history yet.</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={history}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.historyItem}
-                    onPress={() => {
-                      setEquation(item.result);
-                      setShowHistory(false);
-                    }}
-                  >
-                    <Text style={styles.historyExpr}>{item.expression} =</Text>
-                    <Text style={styles.historyRes}>{item.result}</Text>
-                  </TouchableOpacity>
-                )}
-              />
-            )}
-
-            {history.length > 0 && (
-              <TouchableOpacity
-                style={styles.clearHistoryButton}
-                onPress={() => setHistory([])}
-              >
-                <Text style={styles.clearHistoryText}>Clear History</Text>
-              </TouchableOpacity>
-            )}
+      {/* Design update by June Mark C. Undik:
+          Redesigned the display card with a mode badge,
+          calculation expression, result, and status footer. */}
+      <View style={styles.displayCard}>
+        <View style={styles.displayTop}>
+          <View style={styles.modeBadge}>
+            <View style={styles.statusDot} />
+            <Text style={styles.modeText}>STANDARD</Text>
           </View>
+
+          <Text style={styles.displayCaption}>RESULT</Text>
         </View>
-      </Modal>
+
+        <View style={styles.expressionContainer}>
+          <Text style={styles.expression} numberOfLines={1}>
+            {calculation || "Ready to calculate"}
+          </Text>
+        </View>
+
+        <View style={styles.resultContainer}>
+          <Text
+            style={[
+              styles.result,
+              display.length > 10 && styles.smallResult,
+              display === "Error" && styles.errorText,
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.4}
+          >
+            {formatDisplay(display)}
+          </Text>
+        </View>
+
+        <View style={styles.displayDivider} />
+
+        <View style={styles.displayFooter}>
+          <Text style={styles.footerHint}>CALCULATION PANEL</Text>
+          <Text style={styles.liveText}>● READY</Text>
+        </View>
+      </View>
+
+      {/* Design update by June Mark C. Undik:
+          Added a keypad heading and a short instruction. */}
+      <View style={styles.keypadHeader}>
+        <Text style={styles.keypadTitle}>Keypad</Text>
+        <Text style={styles.keypadHint}>Tap to calculate</Text>
+      </View>
+
+      {/* Original button layout retained with updated styling. */}
+      <View style={styles.keypad}>
+        {BUTTONS.map((row, rowIndex) => (
+          <View style={styles.buttonRow} key={rowIndex}>
+            {row.map(renderButton)}
+          </View>
+        ))}
+      </View>
+
+      {/* Design update by June Mark C. Undik:
+          Added a decorative footer and calculator version. */}
+      <View style={styles.footer}>
+        <View style={styles.footerLine} />
+        <Text style={styles.footerText}>
+          DESIGNED FOR SIMPLICITY
+        </Text>
+        <Text style={styles.versionText}>CALC v1.0</Text>
+      </View>
     </View>
   );
 }
 
+// Design update by June Mark C. Undik:
+// Redesigned all styles for a modern dark interface,
+// consistent spacing, rounded corners, and readable text.
 const styles = StyleSheet.create({
-  screen: {
+  container: {
     flex: 1,
-    backgroundColor: "#EEF2FB",
-    justifyContent: "center",
-    paddingHorizontal: 16,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 22,
+    paddingTop: 25,
+    paddingBottom: 12,
   },
-  content: {
-    width: "100%",
-    maxWidth: 426,
-    alignSelf: "center",
-  },
-  calculatorCard: {
-    backgroundColor: "#fbfcff",
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: "#9bb4d9",
-    padding: 18,
-    shadowColor: "#243860",
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 8,
-  },
+
+  // Updated header layout and typography.
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  heading: {
-    flex: 1,
-  },
-  title: {
-    color: "#8A94AD",
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
-  historyButton: {
-    backgroundColor: "#F4D84A",
-    borderWidth: 1,
-    borderColor: "#E7C83A",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
-    shadowColor: "#E7C83A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  historyButtonText: {
-    color: "#4A3B00",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  display: {
-    minHeight: 102,
-    justifyContent: "center",
-    backgroundColor: "#9d9d9d",
-    borderWidth: 1,
-    borderColor: "#E1E7F0",
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 14,
-    overflow: "hidden",
-  },
-  result: {
-    color: "#e7eeff",
-    fontWeight: "600",
-    maxWidth: "100%",
-  },
-  keypad: {
-    gap: 9,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 9,
-  },
-  button: {
-    flex: 1,
-    height: 56,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  numberButton: {
-    backgroundColor: "#007bf6",
-    borderWidth: 1,
-    borderColor: "#E1E7F0",
-  },
-  utilityButton: {
-    backgroundColor: "#8b919e",
-  },
-  actionButton: {
-    backgroundColor: "#DCE3F5",
-  },
-  scientificButton: {
-    backgroundColor: "#EAEFFB",
-    borderWidth: 1,
-    borderColor: "#DCE3F5",
-  },
-  operatorButton: {
-    backgroundColor: "#0eeeee",
-  },
-  equalsButton: {
-    backgroundColor: "#3558E0",
-    shadowColor: "#3558E0",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  buttonText: {
-    fontSize: 20,
-    fontWeight: "600",
-  },
-  numberText: {
-    color: "#1F2A44",
-  },
-  utilityText: {
-    color: "#4A5A8A",
-    fontSize: 18,
-  },
-  actionText: {
-    color: "#4A5A8A",
-    fontSize: 17,
-  },
-  scientificText: {
-    color: "#4A5A8A",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  operatorText: {
-    color: "#3558E0",
-    fontSize: 25,
-  },
-  equalsText: {
-    color: "#FFFFFF",
-    fontSize: 25,
-    fontWeight: "700",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 20,
-    maxHeight: "70%",
-    minHeight: 300,
-  },
-  modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#EDF3FA",
-    paddingBottom: 10,
+    marginBottom: 25,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#183B68",
+
+  appLabel: {
+    color: COLORS.accent,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2.5,
+    marginBottom: 9,
   },
-  closeButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#557095",
+
+  heading: {
+    color: COLORS.text,
+    fontSize: 32,
+    fontWeight: "800",
+    letterSpacing: -1,
   },
-  emptyHistory: {
-    paddingVertical: 40,
+
+  subtitle: {
+    color: COLORS.secondary,
+    fontSize: 12,
+    marginTop: 6,
+  },
+
+  // New decorative icon container.
+  iconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: "#172A49",
+    borderWidth: 1,
+    borderColor: "#294B7A",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  iconText: {
+    color: COLORS.accent,
+    fontSize: 29,
+  },
+
+  // Updated result card with rounded corners and a subtle border.
+  displayCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 26,
+    paddingHorizontal: 20,
+    paddingTop: 19,
+    paddingBottom: 17,
+    marginBottom: 23,
+    borderWidth: 1,
+    borderColor: "#27344E",
+    minHeight: 190,
+  },
+
+  // New display card header.
+  displayTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
-  emptyHistoryText: {
-    color: "#8FA3BE",
-    fontSize: 16,
+
+  modeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#202D43",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
   },
-  historyItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F6FF",
+
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#38BDF8",
+    marginRight: 7,
   },
-  historyExpr: {
-    color: "#6B7C93",
+
+  modeText: {
+    color: "#C6D5EA",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+  },
+
+  displayCaption: {
+    color: COLORS.secondary,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.8,
+  },
+
+  // Improved expression positioning.
+  expressionContainer: {
+    alignItems: "flex-end",
+    marginTop: 20,
+  },
+
+  expression: {
+    color: COLORS.secondary,
     fontSize: 14,
-    textAlign: "right",
+    minHeight: 20,
   },
-  historyRes: {
-    color: "#111827",
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "right",
+
+  // Improved result alignment and sizing.
+  resultContainer: {
+    minHeight: 66,
+    justifyContent: "center",
+    alignItems: "flex-end",
+    marginVertical: 3,
   },
-  clearHistoryButton: {
-    marginTop: 15,
-    backgroundColor: "#FEE2E2",
-    padding: 12,
-    borderRadius: 12,
+
+  result: {
+    color: COLORS.text,
+    fontSize: 49,
+    fontWeight: "300",
+    letterSpacing: -1.5,
+  },
+
+  smallResult: {
+    fontSize: 34,
+  },
+
+  errorText: {
+    color: "#FB7185",
+    fontSize: 32,
+  },
+
+  // New divider separates the result and status footer.
+  displayDivider: {
+    height: 1,
+    backgroundColor: "#2B3852",
+    marginTop: 9,
+    marginBottom: 13,
+  },
+
+  displayFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
-  clearHistoryText: {
-    color: "#DC2626",
+
+  footerHint: {
+    color: "#71809C",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+  },
+
+  liveText: {
+    color: COLORS.accent,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+
+  // New heading above the calculator keypad.
+  keypadHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 13,
+  },
+
+  keypadTitle: {
+    color: COLORS.text,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  keypadHint: {
+    color: COLORS.secondary,
+    fontSize: 11,
+  },
+
+  // Updated keypad spacing.
+  keypad: {
+    gap: 11,
+  },
+
+  buttonRow: {
+    flexDirection: "row",
+    gap: 11,
+  },
+
+  // Design update by June Mark C. Undik:
+  // Increased button corner radius and adjusted button height.
+  button: {
+    flex: 1,
+    height: 62,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.045)",
+  },
+
+  // Makes the zero button wider than the other number buttons.
+  wideButton: {
+    flex: 2,
+  },
+
+  buttonText: {
+    color: COLORS.text,
+    fontSize: 23,
     fontWeight: "600",
-    fontSize: 15,
+  },
+
+  // Updated clear button text.
+  clearText: {
+    color: "#FDA4AF",
+    fontSize: 17,
+    fontWeight: "800",
+  },
+
+  functionText: {
+    color: "#CBD5E1",
+    fontSize: 17,
+  },
+
+  // Highlighted mathematical operators in electric blue.
+  operatorText: {
+    color: "#FFFFFF",
+    fontSize: 27,
+    fontWeight: "500",
+  },
+
+  // Highlighted equals button with contrasting dark text.
+  equalsText: {
+    color: "#08233C",
+    fontSize: 29,
+    fontWeight: "800",
+  },
+
+  // Updated footer layout and typography.
+  footer: {
+    alignItems: "center",
+    marginTop: "auto",
+    paddingTop: 17,
+    paddingBottom: 4,
+  },
+
+  footerLine: {
+    width: 34,
+    height: 3,
+    borderRadius: 3,
+    backgroundColor: "#354765",
+    marginBottom: 10,
+  },
+
+  footerText: {
+    color: "#71809C",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.8,
+  },
+
+  versionText: {
+    color: "#45536D",
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginTop: 5,
   },
 });
