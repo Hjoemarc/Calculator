@@ -1,227 +1,734 @@
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git add .
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git commit -m " Calculator modification by Cris Ian Saavedra"
-[main 1e2598e]  Calculator modification by Cris Ian Saavedra
- 6 files changed, 969 insertions(+), 138 deletions(-)
- create mode 100644 assets/relapse.mp4
- create mode 100644 screens/calculator.js
- create mode 100644 screens/vault.js
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git push
-To https://github.com/Hjoemarc/Calculator.git
- ! [rejected]        main -> main (non-fast-forward)
-error: failed to push some refs to 'https://github.com/Hjoemarc/Calculator.git'
-hint: Updates were rejected because the tip of your current branch is behind
-hint: its remote counterpart. If you want to integrate the remote changes,
-hint: use 'git pull' before pushing again.
-hint: See the 'Note about fast-forwards' in 'git push --help' for details.
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git pull
-hint: You have divergent branches and need to specify how to reconcile them.
-hint: You can do so by running one of the following commands sometime before
-hint: your next pull:
-hint:
-hint:   git config pull.rebase false  # merge
-hint:   git config pull.rebase true   # rebase
-hint:   git config pull.ff only       # fast-forward only
-hint:
-hint: You can replace "git config" with "git config --global" to set a default
-hint: preference for all repositories. You can also pass --rebase, --no-rebase,
-hint: or --ff-only on the command line to override the configured default per
-hint: invocation.
-fatal: Need to specify how to reconcile divergent branches.
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git pull origin main --no-rebase
-From https://github.com/Hjoemarc/Calculator
- * branch            main       -> FETCH_HEAD
-Auto-merging App.js
-CONFLICT (content): Merge conflict in App.js
-Automatic merge failed; fix conflicts and then commit the result.
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git push origin main
-To https://github.com/Hjoemarc/Calculator.git
- ! [rejected]        main -> main (non-fast-forward)
-error: failed to push some refs to 'https://github.com/Hjoemarc/Calculator.git'
-hint: Updates were rejected because the tip of your current branch is behind
-hint: its remote counterpart. If you want to integrate the remote changes,
-hint: use 'git pull' before pushing again.
-hint: See the 'Note about fast-forwards' in 'git push --help' for details.
-crisiana.saavedra@Criss-MacBook-Neo Calculator % npx expo start
-Starting project at /Users/crisiana.saavedra/Documents/Calculator
-› Port 8081 is running this app in another window
-  /Users/crisiana.saavedra/Documents/Calculator (pid 14043)
-✔ Use port 8082 instead? … yes
-Starting Metro Bundler
+import React, { useState, useEffect } from 'react';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TouchableOpacity, 
+  SafeAreaView, 
+  StatusBar,
+  ScrollView, 
+  TextInput 
+} from 'react-native';
+import { Audio, ResizeMode, Video } from 'expo-av';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-█ ▄▄▄▄▄ █   █▄▄█▄▀█ ▄▄▄▄▄ █
-█ █   █ █ ▀▄ █▀█ ██ █   █ █
-█ █▄▄▄█ █▀██▀▀█▀▄██ █▄▄▄█ █
-█▄▄▄▄▄▄▄█▄▀▄█ █▄█▄█▄▄▄▄▄▄▄█
-█ ▄▀▀▄▄▄█▀▀▀▄▀█▄ ███ ▀▄▄ ▄█
-█▀▄█   ▄█▀█▀ ▄██ ▀▀ █▄  ▀██
-█ ▀ ▀▄ ▄██▀▄█▄▀▄▀▄▀▄▀▀▄ ▀██
-███ ▄▄█▄▄█▀██▀██▄▄▄█▄▀ ▀███
-█▄▄▄██▄▄█▀▄█▄▀█▄▄ ▄▄▄ ▀ ▄▄█
-█ ▄▄▄▄▄ █▀██ ▄██▀ █▄█ ▀▀█▀█
-█ █   █ █▄▄▄█▄▀▄█▄▄ ▄▄▀   █
-█ █▄▄▄█ █▀  █▀▄█▄██▄▀█▀▀ ██
-█▄▄▄▄▄▄▄█▄█▄▄▄▄▄████▄▄▄▄▄▄█
+// ==========================================
+// 1. CALCULATOR SCREEN COMPONENT
+// ==========================================
+function CalculatorScreen({ navigation }) {
+  const [displayValue, setDisplayValue] = useState('0');
+  const [expression, setExpression] = useState('');
 
-› Scan the QR code above to open in Expo Go.
-› Metro: exp://192.168.1.56:8082
-› Web: http://localhost:8082
+  const handleTapNumber = (num) => {
+    if (displayValue === '0' || displayValue === 'Error') {
+      setDisplayValue(num.toString());
+    } else {
+      setDisplayValue(displayValue + num);
+    }
+  };
 
-› Using Expo Go (Press s to switch to development build)
-› Press ? │ show all commands
+  const handleTapOperator = (operator) => {
+    setExpression(displayValue + ' ' + operator + ' ');
+    setDisplayValue('0');
+  };
 
-Logs for your project will appear below. Press Ctrl+C to exit.
-› Open in the web browser...
-› Press ? │ show all commands
-Web Bundled 241ms index.js (508 modules)
-Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-Web  WARN  [expo-av]: Expo AV has been deprecated and will be removed in SDK 54. Use the `expo-audio` and `expo-video` packages to replace the required functionality.
-Web  LOG  Running application "main" with appParams:
- {"hydrate": undefined, "rootTag": "#root"} 
-Development-level warnings: ON.
-Performance optimizations: OFF.
-Web Bundled 33ms index.js (1 module)
-Web  WARN  [expo-av]: Expo AV has been deprecated and will be removed in SDK 54. Use the `expo-audio` and `expo-video` packages to replace the required functionality.
-Web  LOG  Running application "main" with appParams:
- {"hydrate": undefined, "rootTag": "#root"} 
-Development-level warnings: ON.
-Performance optimizations: OFF.
-Web  LOG  ⚠️ [expo-av]: Video component from `expo-av` is deprecated in favor of `expo-video`. See the documentation at https://docs.expo.dev/versions/latest/sdk/video/ for the new API reference.
-› Stopped server
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git reset --soft HEAD~1
-fatal: Cannot do a soft reset in the middle of a merge.
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git merge --abort
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git reset --soft HEAD~1
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git -v 
-git version 2.50.1 (Apple Git-155)
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git remote -v
-origin  https://github.com/Hjoemarc/Calculator.git (fetch)
-origin  https://github.com/Hjoemarc/Calculator.git (push)
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git add .
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git commit -m "Calculator modification by Cris Ian"      
-[main 3861c74] Calculator modification by Cris Ian
- 4 files changed, 957 insertions(+), 126 deletions(-)
- create mode 100644 assets/relapse.mp4
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git pull origin main
-remote: Enumerating objects: 14, done.
-remote: Counting objects: 100% (13/13), done.
-remote: Compressing objects: 100% (3/3), done.
-remote: Total 8 (delta 5), reused 8 (delta 5), pack-reused 0 (from 0)
-Unpacking objects: 100% (8/8), 3.35 KiB | 381.00 KiB/s, done.
-From https://github.com/Hjoemarc/Calculator
- * branch            main       -> FETCH_HEAD
-   2c61ec4..1f22003  main       -> origin/main
-hint: You have divergent branches and need to specify how to reconcile them.
-hint: You can do so by running one of the following commands sometime before
-hint: your next pull:
-hint:
-hint:   git config pull.rebase false  # merge
-hint:   git config pull.rebase true   # rebase
-hint:   git config pull.ff only       # fast-forward only
-hint:
-hint: You can replace "git config" with "git config --global" to set a default
-hint: preference for all repositories. You can also pass --rebase, --no-rebase,
-hint: or --ff-only on the command line to override the configured default per
-hint: invocation.
-fatal: Need to specify how to reconcile divergent branches.
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git pull origin main --no-rebase
-From https://github.com/Hjoemarc/Calculator
- * branch            main       -> FETCH_HEAD
-Auto-merging App.js
-CONFLICT (content): Merge conflict in App.js
-Auto-merging package-lock.json
-Automatic merge failed; fix conflicts and then commit the result.
-crisiana.saavedra@Criss-MacBook-Neo Calculator % npx expo strt 
-Invalid project root: /Users/crisiana.saavedra/Documents/Calculator/strt
-crisiana.saavedra@Criss-MacBook-Neo Calculator % npx expo start
-Starting project at /Users/crisiana.saavedra/Documents/Calculator
-› Port 8081 is running this app in another window
-  /Users/crisiana.saavedra/Documents/Calculator (pid 14043)
-✔ Use port 8082 instead? … yes
-Starting Metro Bundler
+  const handleClear = () => {
+    setDisplayValue('0');
+    setExpression('');
+  };
 
-▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-█ ▄▄▄▄▄ █   █▄▄█▄▀█ ▄▄▄▄▄ █
-█ █   █ █ ▀▄ █▀█ ██ █   █ █
-█ █▄▄▄█ █▀██▀▀█▀▄██ █▄▄▄█ █
-█▄▄▄▄▄▄▄█▄▀▄█ █▄█▄█▄▄▄▄▄▄▄█
-█ ▄▀▀▄▄▄█▀▀▀▄▀█▄ ███ ▀▄▄ ▄█
-█▀▄█   ▄█▀█▀ ▄██ ▀▀ █▄  ▀██
-█ ▀ ▀▄ ▄██▀▄█▄▀▄▀▄▀▄▀▀▄ ▀██
-███ ▄▄█▄▄█▀██▀██▄▄▄█▄▀ ▀███
-█▄▄▄██▄▄█▀▄█▄▀█▄▄ ▄▄▄ ▀ ▄▄█
-█ ▄▄▄▄▄ █▀██ ▄██▀ █▄█ ▀▀█▀█
-█ █   █ █▄▄▄█▄▀▄█▄▄ ▄▄▀   █
-█ █▄▄▄█ █▀  █▀▄█▄██▄▀█▀▀ ██
-█▄▄▄▄▄▄▄█▄█▄▄▄▄▄████▄▄▄▄▄▄█
+  const handleEquals = () => {
+    // Secret Passcode Code 1234
+    if (displayValue === '1234') {
+      setDisplayValue('0');
+      setExpression('');
+      navigation.navigate('Vault');
+      return;
+    }
 
-› Scan the QR code above to open in Expo Go.
-› Metro: exp://192.168.1.56:8082
-› Web: http://localhost:8082
+    const fullEquation = expression + displayValue;
+    try {
+      const formattedEquation = fullEquation.replace(/×/g, '*').replace(/÷/g, '/');
+      const result = eval(formattedEquation);
+      setDisplayValue(String(result));
+      setExpression('');
+    } catch (e) {
+      setDisplayValue('Error');
+      setExpression('');
+    }
+  };
 
-› Using Expo Go (Press s to switch to development build)
-› Press ? │ show all commands
+  const renderButton = (label, onPress, styleType = 'number') => {
+    let buttonStyle = calcStyles.btnNumber;
+    let textStyle = calcStyles.btnTextNumber;
 
-Logs for your project will appear below. Press Ctrl+C to exit.
-› Open in the web browser...
-› Press ? │ show all commands
-Web Bundled 181ms index.js (366 modules)
-Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-Web  WARN  [expo-av]: Expo AV has been deprecated and will be removed in SDK 54. Use the `expo-audio` and `expo-video` packages to replace the required functionality.
-Web  LOG  Running application "main" with appParams:
- {"hydrate": undefined, "rootTag": "#root"} 
-Development-level warnings: ON.
-Performance optimizations: OFF.
-Web Bundled 20ms index.js (1 module)
-Web  WARN  [expo-av]: Expo AV has been deprecated and will be removed in SDK 54. Use the `expo-audio` and `expo-video` packages to replace the required functionality.
-Web  LOG  Running application "main" with appParams:
- {"hydrate": undefined, "rootTag": "#root"} 
-Development-level warnings: ON.
-Performance optimizations: OFF.
-› Stopped server
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git merge --abort
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git reset --soft HEAD~1
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git add .
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git commit -m, "Calculator modification by Cris Ian"
-error: pathspec 'Calculator modification by Cris Ian' did not match any file(s) known to git
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git commit -m "Calculator modification by Cris Ian"
-[main b9db61c] Calculator modification by Cris Ian
- 4 files changed, 957 insertions(+), 126 deletions(-)
- create mode 100644 assets/relapse.mp4
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git pull origin main --no-rebase
-From https://github.com/Hjoemarc/Calculator
- * branch            main       -> FETCH_HEAD
-Auto-merging App.js
-CONFLICT (content): Merge conflict in App.js
-Auto-merging package-lock.json
-Automatic merge failed; fix conflicts and then commit the result.
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git merge --abort
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git reset --soft HEAD~1
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git pull origin main --no-rebase
-remote: Enumerating objects: 18, done.
-remote: Counting objects: 100% (18/18), done.
-remote: Compressing objects: 100% (4/4), done.
-remote: Total 12 (delta 8), reused 12 (delta 8), pack-reused 0 (from 0)
-Unpacking objects: 100% (12/12), 2.61 KiB | 121.00 KiB/s, done.
-From https://github.com/Hjoemarc/Calculator
- * branch            main       -> FETCH_HEAD
-   1f22003..d0532bd  main       -> origin/main
-Updating 04e9859..d0532bd
-error: Your local changes to the following files would be overwritten by merge:
-        App.js
-        package-lock.json
-Please commit your changes or stash them before you merge.
-Aborting
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git add .
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git commit -m "Calculator Modify by Cris Ian Saavedra"   
-[main bf86ce8] Calculator Modify by Cris Ian Saavedra
- 4 files changed, 957 insertions(+), 126 deletions(-)
- create mode 100644 assets/relapse.mp4
-crisiana.saavedra@Criss-MacBook-Neo Calculator % git pull origin main --no-rebase
-From https://github.com/Hjoemarc/Calculator
- * branch            main       -> FETCH_HEAD
-Auto-merging App.js
-CONFLICT (content): Merge conflict in App.js
-Auto-merging package-lock.json
-Automatic merge failed; fix conflicts and then commit the result.
-crisiana.saavedra@Criss-MacBook-Neo Calculator %     
+    if (styleType === 'operator') {
+      buttonStyle = calcStyles.btnOperator;
+      textStyle = calcStyles.btnTextOperator;
+    } else if (styleType === 'action') {
+      buttonStyle = calcStyles.btnAction;
+      textStyle = calcStyles.btnTextAction;
+    }
+
+    return (
+      <TouchableOpacity style={[calcStyles.button, buttonStyle]} onPress={onPress}>
+        <Text style={textStyle}>{label}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <SafeAreaView style={calcStyles.container}>
+      <StatusBar barStyle="light-content" />
+      
+      {/* Top Futuristic Header */}
+      <View style={calcStyles.topHeader}>
+        <Text style={calcStyles.brandTitle}>K I O' S // CALCU v.code.1234</Text>
+      </View>
+
+      {/* Futuristic Display */}
+      <View style={calcStyles.displayContainer}>
+        <Text style={calcStyles.expressionText}>{expression}</Text>
+        <Text style={calcStyles.displayText} numberOfLines={1}>{displayValue}</Text>
+      </View>
+
+      {/* Keypad */}
+      <View style={calcStyles.keypad}>
+        <View style={calcStyles.row}>
+          {renderButton('C', handleClear, 'action')}
+          {renderButton('+/-', () => setDisplayValue(String(parseFloat(displayValue) * -1)), 'action')}
+          {renderButton('%', () => setDisplayValue(String(parseFloat(displayValue) / 100)), 'action')}
+          {renderButton('÷', () => handleTapOperator('÷'), 'operator')}
+        </View>
+
+        <View style={calcStyles.row}>
+          {renderButton('7', () => handleTapNumber(7))}
+          {renderButton('8', () => handleTapNumber(8))}
+          {renderButton('9', () => handleTapNumber(9))}
+          {renderButton('×', () => handleTapOperator('×'), 'operator')}
+        </View>
+
+        <View style={calcStyles.row}>
+          {renderButton('4', () => handleTapNumber(4))}
+          {renderButton('5', () => handleTapNumber(5))}
+          {renderButton('6', () => handleTapNumber(6))}
+          {renderButton('-', () => handleTapOperator('-'), 'operator')}
+        </View>
+
+        <View style={calcStyles.row}>
+          {renderButton('1', () => handleTapNumber(1))}
+          {renderButton('2', () => handleTapNumber(2))}
+          {renderButton('3', () => handleTapNumber(3))}
+          {renderButton('+', () => handleTapOperator('+'), 'operator')}
+        </View>
+
+        <View style={calcStyles.row}>
+          <TouchableOpacity style={[calcStyles.button, calcStyles.btnNumber, calcStyles.zeroButton]} onPress={() => handleTapNumber(0)}>
+            <Text style={calcStyles.btnTextNumber}>0</Text>
+          </TouchableOpacity>
+          {renderButton('.', () => handleTapNumber('.'))}
+          {renderButton('=', handleEquals, 'operator')}
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ==========================================
+// 2. VAULT SCREEN COMPONENT
+// ==========================================
+function VaultScreen({ navigation }) {
+  const [activeTab, setActiveTab] = useState('videos');
+
+  // Dynamic Notes State
+  const [notes, setNotes] = useState([]);
+  const [newNote, setNewNote] = useState('');
+
+  // Active playing video state
+  const [activeVideo, setActiveVideo] = useState(null);
+
+  // Video List using local relapse.mp4 asset
+  const [videoList, setVideoList] = useState([
+    { id: '1', name: 'Relapse Video', source: require('./assets/relapse.mp4') }
+  ]);
+
+  // UI State for Hidden Apps
+  const [appList, setAppList] = useState([]);
+
+  // Enable sound playback on all devices
+  useEffect(() => {
+    async function enableAudio() {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+        });
+      } catch (e) {
+        console.log('Audio mode error:', e);
+      }
+    }
+    enableAudio();
+  }, []);
+
+  // Note Handlers
+  const handleAddNote = () => {
+    if (newNote.trim() !== '') {
+      setNotes([...notes, { id: Date.now().toString(), text: newNote }]);
+      setNewNote('');
+    }
+  };
+
+  const handleDeleteNote = (id) => {
+    setNotes(notes.filter(note => note.id !== id));
+  };
+
+  // Video Handlers
+  const handleAddVideoSim = () => {
+    const nextNum = videoList.length + 1;
+    setVideoList([
+      ...videoList, 
+      { id: Date.now().toString(), name: `Relapse Video ${nextNum}`, source: require('./assets/relapse.mp4') }
+    ]);
+  };
+
+  const handleDeleteVideoSim = (id) => {
+    if (activeVideo?.id === id) setActiveVideo(null);
+    setVideoList(videoList.filter(v => v.id !== id));
+  };
+
+  // App Handlers
+  const handleAddAppSim = () => {
+    const appName = `Hidden App ${appList.length + 1}`;
+    setAppList([...appList, { id: Date.now().toString(), name: appName }]);
+  };
+
+  const handleDeleteAppSim = (id) => {
+    setAppList(appList.filter(a => a.id !== id));
+  };
+
+  return (
+    <SafeAreaView style={vaultStyles.container}>
+      {/* OS Phone Top Header Bar */}
+      <View style={vaultStyles.osHeader}>
+        <View style={vaultStyles.statusBox}>
+          <Text style={vaultStyles.phoneTime}>09:41</Text>
+          <Text style={vaultStyles.vaultBadge}>⚡ SECURE OS VAULT</Text>
+        </View>
+        <TouchableOpacity 
+          style={vaultStyles.lockBtn}
+          onPress={() => navigation.navigate('Calculator')}
+        >
+          <Text style={vaultStyles.lockText}>🔒 LOCK</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Cyber Dock Tabs */}
+      <View style={vaultStyles.dock}>
+        <TouchableOpacity 
+          style={[vaultStyles.dockItem, activeTab === 'videos' && vaultStyles.activeDockItem]}
+          onPress={() => { setActiveTab('videos'); setActiveVideo(null); }}
+        >
+          <Text style={vaultStyles.dockEmoji}>🎬</Text>
+          <Text style={vaultStyles.dockLabel}>Videos</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[vaultStyles.dockItem, activeTab === 'apps' && vaultStyles.activeDockItem]}
+          onPress={() => { setActiveTab('apps'); setActiveVideo(null); }}
+        >
+          <Text style={vaultStyles.dockEmoji}>📱</Text>
+          <Text style={vaultStyles.dockLabel}>Apps</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[vaultStyles.dockItem, activeTab === 'notes' && vaultStyles.activeDockItem]}
+          onPress={() => { setActiveTab('notes'); setActiveVideo(null); }}
+        >
+          <Text style={vaultStyles.dockEmoji}>📝</Text>
+          <Text style={vaultStyles.dockLabel}>Notes</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Vault Body Content */}
+      <ScrollView contentContainerStyle={vaultStyles.content}>
+        
+        {/* ================= VIDEOS TAB ================= */}
+        {activeTab === 'videos' && (
+          <View>
+            <View style={vaultStyles.headerWithAction}>
+              <Text style={vaultStyles.heading}>🎬 Video Vault</Text>
+              <TouchableOpacity style={vaultStyles.actionBtn} onPress={handleAddVideoSim}>
+                <Text style={vaultStyles.actionBtnText}>+ Add Video</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Embedded Active Video Player */}
+            {activeVideo && (
+              <View style={vaultStyles.playerContainer}>
+                <Text style={vaultStyles.playingTitle}>▶ Playing: {activeVideo.name}</Text>
+                <Video
+                  source={activeVideo.source}
+                  style={vaultStyles.videoPlayer}
+                  resizeMode={ResizeMode.CONTAIN}
+                  shouldPlay
+                  useNativeControls
+                  isMuted={false}
+                  volume={1.0}
+                  isLooping
+                />
+                <TouchableOpacity 
+                  style={vaultStyles.closePlayerBtn}
+                  onPress={() => setActiveVideo(null)}
+                >
+                  <Text style={vaultStyles.closePlayerText}>✕ Close Player</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* List of Videos */}
+            {videoList.length === 0 ? (
+              <View style={vaultStyles.emptyBox}>
+                <Text style={vaultStyles.emptyText}>No videos stored in vault.</Text>
+              </View>
+            ) : (
+              videoList.map((v) => (
+                <View key={v.id} style={vaultStyles.itemCard}>
+                  <TouchableOpacity 
+                    style={vaultStyles.itemInfoTouchable} 
+                    onPress={() => setActiveVideo(v)}
+                  >
+                    <Text style={vaultStyles.itemEmoji}>▶️</Text>
+                    <View style={vaultStyles.itemInfo}>
+                      <Text style={vaultStyles.itemTitle}>{v.name}</Text>
+                      <Text style={vaultStyles.itemSub}>Tap to play video</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDeleteVideoSim(v.id)}>
+                    <Text style={vaultStyles.deleteIconText}>🗑️</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+        )}
+
+        {/* ================= APPS TAB ================= */}
+        {activeTab === 'apps' && (
+          <View>
+            <View style={vaultStyles.headerWithAction}>
+              <Text style={vaultStyles.heading}>📱 Hidden Apps</Text>
+              <TouchableOpacity style={vaultStyles.actionBtn} onPress={handleAddAppSim}>
+                <Text style={vaultStyles.actionBtnText}>+ Hide App</Text>
+              </TouchableOpacity>
+            </View>
+
+            {appList.length === 0 ? (
+              <View style={vaultStyles.emptyBox}>
+                <Text style={vaultStyles.emptyText}>No hidden applications installed.</Text>
+              </View>
+            ) : (
+              appList.map((a) => (
+                <View key={a.id} style={vaultStyles.itemCard}>
+                  <Text style={vaultStyles.itemEmoji}>🔓</Text>
+                  <View style={vaultStyles.itemInfo}>
+                    <Text style={vaultStyles.itemTitle}>{a.name}</Text>
+                    <Text style={vaultStyles.itemSub}>Sandboxed Environment</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => handleDeleteAppSim(a.id)}>
+                    <Text style={vaultStyles.deleteIconText}>🗑️</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+        )}
+
+        {/* ================= NOTES TAB ================= */}
+        {activeTab === 'notes' && (
+          <View>
+            <Text style={vaultStyles.heading}>📝 Encrypted Notes</Text>
+
+            <View style={vaultStyles.inputRow}>
+              <TextInput 
+                style={vaultStyles.input}
+                placeholder="Type a new secret note..."
+                placeholderTextColor="#475569"
+                value={newNote}
+                onChangeText={setNewNote}
+              />
+              <TouchableOpacity style={vaultStyles.saveBtn} onPress={handleAddNote}>
+                <Text style={vaultStyles.saveBtnText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {notes.length === 0 ? (
+              <View style={vaultStyles.emptyBox}>
+                <Text style={vaultStyles.emptyText}>No secret notes saved yet.</Text>
+              </View>
+            ) : (
+              notes.map((item) => (
+                <View key={item.id} style={vaultStyles.noteCard}>
+                  <Text style={vaultStyles.noteText}>{item.text}</Text>
+                  <TouchableOpacity 
+                    style={vaultStyles.deleteIconBtn} 
+                    onPress={() => handleDeleteNote(item.id)}
+                  >
+                    <Text style={vaultStyles.deleteIconText}>🗑️</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+        )}
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+// ==========================================
+// 3. MAIN APP ROUTER (NAVIGATION)
+// ==========================================
+const Stack = createNativeStackNavigator();
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator 
+        initialRouteName="Calculator" 
+        screenOptions={{ headerShown: false }}
+      >
+        <Stack.Screen name="Calculator" component={CalculatorScreen} />
+        <Stack.Screen name="Vault" component={VaultScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+// ==========================================
+// 4. STYLES
+// ==========================================
+const calcStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#050B14',
+  },
+  topHeader: {
+    paddingHorizontal: 24,
+    paddingTop: 15,
+    alignItems: 'center',
+  },
+  brandTitle: {
+    color: '#00F0FF',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 3,
+  },
+  displayContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    paddingHorizontal: 28,
+    paddingBottom: 24,
+    marginHorizontal: 12,
+    marginTop: 10,
+    backgroundColor: 'rgba(0, 240, 255, 0.03)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 255, 0.15)',
+  },
+  expressionText: {
+    color: '#64748B',
+    fontSize: 20,
+    marginBottom: 8,
+  },
+  displayText: {
+    color: '#00F0FF',
+    fontSize: 64,
+    fontWeight: '300',
+    textShadowColor: 'rgba(0, 240, 255, 0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  keypad: {
+    paddingHorizontal: 14,
+    paddingBottom: 20,
+    marginTop: 15,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  button: {
+    width: 76,
+    height: 76,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zeroButton: {
+    width: 162,
+    alignItems: 'flex-start',
+    paddingLeft: 32,
+  },
+  btnNumber: {
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  btnTextNumber: {
+    color: '#F8FAFC',
+    fontSize: 28,
+    fontWeight: '500',
+  },
+  btnAction: {
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  btnTextAction: {
+    color: '#00F0FF',
+    fontSize: 22,
+    fontWeight: '600',
+  },
+  btnOperator: {
+    backgroundColor: '#00F0FF',
+  },
+  btnTextOperator: {
+    color: '#050B14',
+    fontSize: 30,
+    fontWeight: 'bold',
+  },
+});
+
+const vaultStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#030712',
+  },
+  osHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F2937',
+  },
+  statusBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  phoneTime: {
+    color: '#F9FAFB',
+    fontSize: 15,
+    fontWeight: 'bold',
+    marginRight: 10,
+  },
+  vaultBadge: {
+    color: '#10B981',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  lockBtn: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  lockText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  dock: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 14,
+    backgroundColor: '#0B0F19',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F2937',
+  },
+  dockItem: {
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 14,
+    width: 80,
+  },
+  activeDockItem: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#00F0FF',
+  },
+  dockEmoji: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  dockLabel: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  content: {
+    padding: 20,
+  },
+  heading: {
+    color: '#F9FAFB',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  headerWithAction: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  actionBtn: {
+    backgroundColor: 'rgba(0, 240, 255, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#00F0FF',
+  },
+  actionBtnText: {
+    color: '#00F0FF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  playerContainer: {
+    backgroundColor: '#000000',
+    borderRadius: 16,
+    padding: 10,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#00F0FF',
+    alignItems: 'center',
+  },
+  playingTitle: {
+    color: '#00F0FF',
+    fontWeight: 'bold',
+    fontSize: 13,
+    marginBottom: 10,
+    alignSelf: 'flex-start',
+  },
+  videoPlayer: {
+    width: '100%',
+    height: 480,
+    borderRadius: 12,
+    backgroundColor: '#000000',
+  },
+  closePlayerBtn: {
+    marginTop: 12,
+    backgroundColor: '#1E293B',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: '100%',
+  },
+  closePlayerText: {
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#111827',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    color: '#FFF',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+  },
+  saveBtn: {
+    backgroundColor: '#00F0FF',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    borderRadius: 10,
+  },
+  saveBtnText: {
+    color: '#030712',
+    fontWeight: 'bold',
+  },
+  noteCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#111827',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#00F0FF',
+  },
+  noteText: {
+    color: '#E5E7EB',
+    fontSize: 14,
+    flex: 1,
+    marginRight: 10,
+  },
+  deleteIconBtn: {
+    padding: 4,
+  },
+  deleteIconText: {
+    fontSize: 16,
+  },
+  emptyBox: {
+    padding: 30,
+    alignItems: 'center',
+    backgroundColor: '#0B0F19',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 13,
+  },
+  itemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#111827',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+  },
+  itemInfoTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  itemEmoji: {
+    fontSize: 22,
+    marginRight: 12,
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemTitle: {
+    color: '#F9FAFB',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  itemSub: {
+    color: '#6B7280',
+    fontSize: 12,
+    marginTop: 2,
+  },
+});
