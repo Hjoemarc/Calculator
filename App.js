@@ -90,19 +90,25 @@ export default function App() {
     <>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+<<<<<<< HEAD
         body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #0f172a; }
         .calculator { width: 100%; max-width: 340px; background: #1e293b; border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
         .app-header { text-align: center; color: #38bdf8; font-size: 0.95rem; font-weight: 600; margin-bottom: 16px; letter-spacing: 0.5px; }
         .display { background: #0f172a; border-radius: 12px; padding: 20px 16px; text-align: right; margin-bottom: 20px; min-height: 84px; display: flex; flex-direction: column; justify-content: space-between; word-break: break-all; }
+=======
+        body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #111827; }
+        .calculator { width: 100%; max-width: 340px; background: #312e81; border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .display { background: #111827; border-radius: 12px; padding: 20px 16px; text-align: right; margin-bottom: 20px; min-height: 84px; display: flex; flex-direction: column; justify-content: space-between; word-break: break-all; }
+>>>>>>> c8d50e11f70074a58b47326919d30b2428525131
         .previous-operand { color: #94a3b8; font-size: 1rem; min-height: 20px; }
         .current-operand { color: #f8fafc; font-size: 2.2rem; font-weight: 600; line-height: 1.1; }
         .keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
         .btn { height: 60px; font-size: 1.25rem; font-weight: 500; border: none; border-radius: 12px; cursor: pointer; transition: filter 0.15s ease, transform 0.05s ease; user-select: none; }
         .btn:active { transform: scale(0.96); }
-        .btn-num { background-color: #334155; color: #f8fafc; }
-        .btn-fn { background-color: #475569; color: #e2e8f0; }
-        .btn-op { background-color: #f59e0b; color: #ffffff; font-size: 1.4rem; }
-        .btn-eq { background-color: #10b981; color: #ffffff; font-size: 1.4rem; }
+        .btn-num { background-color: #4338ca; color: #f8fafc; }
+        .btn-fn { background-color: #5b21b6; color: #e2e8f0; }
+        .btn-op { background-color: #ec4899; color: #ffffff; font-size: 1.4rem; }
+        .btn-eq { background-color: #06b6d4; color: #ffffff; font-size: 1.4rem; }
         .btn:hover { filter: brightness(1.15); }
       `}</style>
 
