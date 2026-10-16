@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   View,
   ScrollView,
+  Modal,
+  FlatList,
 } from "react-native";
 
 const BUTTON_ROWS = [
@@ -28,6 +30,8 @@ export default function App() {
   const [equation, setEquation] = useState("0");
   const [evaluated, setEvaluated] = useState(false);
   const [lastAnswer, setLastAnswer] = useState("0");
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
   const scrollRef = useRef(null);
 
   const clear = () => {
@@ -72,6 +76,15 @@ export default function App() {
     });
   };
 
+  const addToHistory = (expr, res) => {
+    const newItem = {
+      id: Date.now().toString(),
+      expression: formatDisplay(expr),
+      result: formatDisplay(res),
+    };
+    setHistory((prev) => [newItem, ...prev]);
+  };
+
   const applyUnary = (operation) => {
     if (equation === "Error") return;
     try {
@@ -83,11 +96,21 @@ export default function App() {
       let val = eval(mathExpr);
       let res = 0;
 
-      if (operation === "%") res = val / 100;
-      else if (operation === "±") res = val * -1;
-      else if (operation === "√") res = Math.sqrt(val);
-      else if (operation === "x²") res = val * val;
-      else if (operation === "1/x") res = 1 / val;
+      let exprLabel = `${operation}(${mathExpr})`;
+      if (operation === "%") {
+        res = val / 100;
+        exprLabel = `${mathExpr}%`;
+      } else if (operation === "±") {
+        res = val * -1;
+        exprLabel = `neg(${mathExpr})`;
+      } else if (operation === "√") res = Math.sqrt(val);
+      else if (operation === "x²") {
+        res = val * val;
+        exprLabel = `${mathExpr}²`;
+      } else if (operation === "1/x") {
+        res = 1 / val;
+        exprLabel = `1/${mathExpr}`;
+      }
 
       if (!isFinite(res) || isNaN(res)) {
         setEquation("Error");
@@ -95,6 +118,7 @@ export default function App() {
       }
 
       res = Math.round(res * 1e10) / 1e10;
+      addToHistory(exprLabel, res.toString());
       setEquation(res.toString());
       setLastAnswer(res.toString());
       setEvaluated(true);
@@ -118,7 +142,10 @@ export default function App() {
         return;
       }
 
+      const originalExpr = equation;
       res = Math.round(res * 1e10) / 1e10;
+      addToHistory(originalExpr, res.toString());
+
       setEquation(res.toString());
       setLastAnswer(res.toString());
       setEvaluated(true);
@@ -194,6 +221,15 @@ export default function App() {
             <View style={styles.heading}>
               <Text style={styles.title}>CALCULATOR</Text>
             </View>
+            <TouchableOpacity
+              style={styles.historyButton}
+              onPress={() => setShowHistory(true)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="View History"
+            >
+              <Text style={styles.historyButtonText}>History</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.display}>
@@ -201,13 +237,13 @@ export default function App() {
               horizontal
               ref={scrollRef}
               showsHorizontalScrollIndicator={false}
-              style={{ width: "100%" }} // Forces ScrollView to stay inside container
+              style={{ width: "100%" }}
               onContentSizeChange={() =>
                 scrollRef.current?.scrollToEnd({ animated: true })
               }
               contentContainerStyle={{
                 flexGrow: 1,
-                justifyContent: "flex-end", // Keeps text to the right when short
+                justifyContent: "flex-end",
                 alignItems: "center",
               }}
             >
@@ -244,6 +280,57 @@ export default function App() {
           </View>
         </View>
       </View>
+
+      {/* History Modal */}
+      <Modal
+        visible={showHistory}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowHistory(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Calculation History</Text>
+              <TouchableOpacity onPress={() => setShowHistory(false)}>
+                <Text style={styles.closeButtonText}>✕ Close</Text>
+              </TouchableOpacity>
+            </View>
+
+            {history.length === 0 ? (
+              <View style={styles.emptyHistory}>
+                <Text style={styles.emptyHistoryText}>No history yet.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={history}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.historyItem}
+                    onPress={() => {
+                      setEquation(item.result);
+                      setShowHistory(false);
+                    }}
+                  >
+                    <Text style={styles.historyExpr}>{item.expression} =</Text>
+                    <Text style={styles.historyRes}>{item.result}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+
+            {history.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearHistoryButton}
+                onPress={() => setHistory([])}
+              >
+                <Text style={styles.clearHistoryText}>Clear History</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -285,6 +372,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     letterSpacing: 2,
+  },
+  historyButton: {
+    backgroundColor: "#F4D84A",
+    borderWidth: 1,
+    borderColor: "#E7C83A",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
+    shadowColor: "#E7C83A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  historyButtonText: {
+    color: "#4A3B00",
+    fontSize: 13,
+    fontWeight: "700",
   },
   display: {
     minHeight: 102,
@@ -372,5 +477,73 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 25,
     fontWeight: "700",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
+    maxHeight: "70%",
+    minHeight: 300,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EDF3FA",
+    paddingBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#183B68",
+  },
+  closeButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#557095",
+  },
+  emptyHistory: {
+    paddingVertical: 40,
+    alignItems: "center",
+  },
+  emptyHistoryText: {
+    color: "#8FA3BE",
+    fontSize: 16,
+  },
+  historyItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F6FF",
+  },
+  historyExpr: {
+    color: "#6B7C93",
+    fontSize: 14,
+    textAlign: "right",
+  },
+  historyRes: {
+    color: "#111827",
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "right",
+  },
+  clearHistoryButton: {
+    marginTop: 15,
+    backgroundColor: "#FEE2E2",
+    padding: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  clearHistoryText: {
+    color: "#DC2626",
+    fontWeight: "600",
+    fontSize: 15,
   },
 });
