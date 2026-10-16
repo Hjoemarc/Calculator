@@ -469,6 +469,9 @@ export default function App() {
                       setEvaluated(true);
                       setShowHistory(false);
                     }}
+                    onLongPress={() => {                             
+                      setHistory((prev) => prev.filter((h) => h.id !== item.id));  
+                    }} 
                   >
                     <Text style={styles.historyExpr}>{item.expression}</Text>
                     <Text style={styles.historyResult}>
