@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ScrollView,
 } from "react-native";
 
 const BUTTON_ROWS = [
@@ -23,217 +24,137 @@ const OPERATORS = {
   "+": "+",
 };
 
-const OPERATOR_LABELS = {
-  "/": "÷",
-  "*": "×",
-  "-": "−",
-  "+": "+",
-};
-
-function formatResult(value) {
-  if (!Number.isFinite(value)) return "Error";
-  const rounded = Math.round((value + Number.EPSILON) * 1e10) / 1e10;
-  return String(Object.is(rounded, -0) ? 0 : rounded);
-}
-
-function calculate(left, right, operator) {
-  switch (operator) {
-    case "+":
-      return formatResult(left + right);
-    case "-":
-      return formatResult(left - right);
-    case "*":
-      return formatResult(left * right);
-    case "/":
-      return right === 0 ? "Error" : formatResult(left / right);
-    default:
-      return String(right);
-  }
-}
-
 export default function App() {
-  const [display, setDisplay] = useState("0");
-  const [firstOperand, setFirstOperand] = useState(null);
-  const [operator, setOperator] = useState(null);
-  const [waitingForOperand, setWaitingForOperand] = useState(false);
-  const [expression, setExpression] = useState("");
-  const [lastAnswer, setLastAnswer] = useState(null);
+  const [equation, setEquation] = useState("0");
+  const [evaluated, setEvaluated] = useState(false);
+  const [lastAnswer, setLastAnswer] = useState("0");
+  const scrollRef = useRef(null);
 
   const clear = () => {
-    setDisplay("0");
-    setFirstOperand(null);
-    setOperator(null);
-    setWaitingForOperand(false);
-    setExpression("");
-  };
-
-  const inputDigit = (digit) => {
-    if (display === "Error") {
-      setDisplay(digit);
-      setFirstOperand(null);
-      setOperator(null);
-      setExpression("");
-      setWaitingForOperand(false);
-      return;
-    }
-
-    if (waitingForOperand) {
-      setDisplay(digit);
-      setWaitingForOperand(false);
-      return;
-    }
-
-    const digitCount = display.replace(/[-.]/g, "").length;
-    if (digitCount >= 12) return;
-    setDisplay(display === "0" ? digit : `${display}${digit}`);
-  };
-
-  const inputDecimal = () => {
-    if (display === "Error") {
-      setDisplay("0.");
-      setFirstOperand(null);
-      setOperator(null);
-      setExpression("");
-      setWaitingForOperand(false);
-      return;
-    }
-
-    if (waitingForOperand) {
-      setDisplay("0.");
-      setWaitingForOperand(false);
-    } else if (!display.includes(".")) {
-      setDisplay(`${display}.`);
-    }
-  };
-
-  const toggleSign = () => {
-    if (display === "Error" || display === "0") return;
-    setDisplay(display.startsWith("-") ? display.slice(1) : `-${display}`);
-    setWaitingForOperand(false);
-  };
-
-  const inputPercent = () => {
-    if (display === "Error") return;
-    setDisplay(formatResult(parseFloat(display) / 100));
-    setWaitingForOperand(false);
+    setEquation("0");
+    setEvaluated(false);
   };
 
   const deleteDigit = () => {
-    if (display === "Error" || waitingForOperand) {
-      setDisplay("0");
-      setWaitingForOperand(false);
+    if (evaluated || equation === "Error") {
+      setEquation("0");
+      setEvaluated(false);
       return;
     }
-
-    const shortened = display.slice(0, -1);
-    setDisplay(shortened === "" || shortened === "-" ? "0" : shortened);
+    setEquation((prev) => (prev.length === 1 ? "0" : prev.slice(0, -1)));
   };
 
-  const performOperation = (nextOperator) => {
-    if (display === "Error") return;
-
-    const inputValue = parseFloat(display);
-    if (waitingForOperand && nextOperator !== "=") {
-      if (firstOperand === null) {
-        setFirstOperand(inputValue);
+  const appendDigit = (num) => {
+    if (evaluated || equation === "Error") {
+      setEquation(num === "." ? "0." : num);
+      setEvaluated(false);
+      return;
+    }
+    setEquation((prev) => {
+      if (num === ".") {
+        const match = prev.match(/(\d+\.?\d*)$/);
+        if (match && match[0].includes(".")) return prev;
       }
-      setOperator(nextOperator);
-      setExpression(`${display} ${OPERATOR_LABELS[nextOperator]}`);
-      return;
-    }
-
-    if (firstOperand === null) {
-      if (nextOperator !== "=") {
-        setFirstOperand(inputValue);
-        setOperator(nextOperator);
-        setExpression(`${display} ${OPERATOR_LABELS[nextOperator]}`);
-        setWaitingForOperand(true);
-      }
-      return;
-    }
-
-    if (operator === null) return;
-
-    const result = calculate(firstOperand, inputValue, operator);
-    const completedExpression = `${firstOperand} ${OPERATOR_LABELS[operator]} ${display}`;
-    if (result === "Error") {
-      setDisplay(result);
-      setFirstOperand(null);
-      setOperator(null);
-      setWaitingForOperand(false);
-      setExpression(`${completedExpression} =`);
-      return;
-    }
-
-    setDisplay(result);
-    if (nextOperator === "=") {
-      setLastAnswer(result);
-      setFirstOperand(null);
-      setOperator(null);
-      setWaitingForOperand(true);
-      setExpression(`${completedExpression} =`);
-      return;
-    }
-
-    setFirstOperand(parseFloat(result));
-    setOperator(nextOperator);
-    setWaitingForOperand(true);
-    setExpression(`${result} ${OPERATOR_LABELS[nextOperator]}`);
+      if (prev === "0" && num !== ".") return num;
+      return prev + num;
+    });
   };
 
-  const performScientificOperation = (label) => {
-    if (display === "Error") return;
-    const value = parseFloat(display);
-    let result;
+  const chooseOp = (op) => {
+    if (equation === "Error") return;
+    setEvaluated(false);
+    setEquation((prev) => {
+      const lastChar = prev.slice(-1);
+      if (["+", "-", "*", "/"].includes(lastChar)) {
+        return prev.slice(0, -1) + op;
+      }
+      return prev + op;
+    });
+  };
 
-    if (label === "√") {
-      result = value < 0 ? "Error" : formatResult(Math.sqrt(value));
-    } else if (label === "x²") {
-      result = formatResult(value * value);
+  const applyUnary = (operation) => {
+    if (equation === "Error") return;
+    try {
+      let mathExpr = equation;
+      if (["+", "-", "*", "/"].includes(mathExpr.slice(-1))) {
+        mathExpr = mathExpr.slice(0, -1);
+      }
+      // eslint-disable-next-line no-eval
+      let val = eval(mathExpr);
+      let res = 0;
+
+      if (operation === "%") res = val / 100;
+      else if (operation === "±") res = val * -1;
+      else if (operation === "√") res = Math.sqrt(val);
+      else if (operation === "x²") res = val * val;
+      else if (operation === "1/x") res = 1 / val;
+
+      if (!isFinite(res) || isNaN(res)) {
+        setEquation("Error");
+        return;
+      }
+
+      res = Math.round(res * 1e10) / 1e10;
+      setEquation(res.toString());
+      setLastAnswer(res.toString());
+      setEvaluated(true);
+    } catch (e) {
+      setEquation("Error");
+    }
+  };
+
+  const compute = () => {
+    if (equation === "Error") return;
+    try {
+      let mathExpr = equation;
+      if (["+", "-", "*", "/"].includes(mathExpr.slice(-1))) {
+        mathExpr = mathExpr.slice(0, -1);
+      }
+      // eslint-disable-next-line no-eval
+      let res = eval(mathExpr);
+
+      if (!isFinite(res) || isNaN(res)) {
+        setEquation("Error");
+        return;
+      }
+
+      res = Math.round(res * 1e10) / 1e10;
+      setEquation(res.toString());
+      setLastAnswer(res.toString());
+      setEvaluated(true);
+    } catch (e) {
+      setEquation("Error");
+    }
+  };
+
+  const appendAns = () => {
+    if (evaluated || equation === "Error" || equation === "0") {
+      setEquation(lastAnswer);
+      setEvaluated(false);
     } else {
-      result = value === 0 ? "Error" : formatResult(1 / value);
-    }
-
-    const nextExpression = `${label}(${display}) =`;
-    setDisplay(result);
-    setExpression(nextExpression);
-    setFirstOperand(null);
-    setOperator(null);
-    setWaitingForOperand(true);
-    if (result !== "Error") {
-      setLastAnswer(result);
+      setEquation((prev) => prev + lastAnswer);
     }
   };
 
   const handlePress = (label) => {
-    if (label === "AC") {
-      clear();
-    } else if (label === "DEL") {
-      deleteDigit();
-    } else if (label === "±") {
-      toggleSign();
-    } else if (label === "%") {
-      inputPercent();
-    } else if (label === "ANS") {
-      if (lastAnswer !== null) {
-        setDisplay(lastAnswer);
-        setFirstOperand(null);
-        setOperator(null);
-        setWaitingForOperand(false);
-      }
-    } else if (label === "√" || label === "x²" || label === "1/x") {
-      performScientificOperation(label);
-    } else if (label === ".") {
-      inputDecimal();
-    } else if (label === "=") {
-      if (operator !== null && firstOperand !== null && !waitingForOperand) {
-        performOperation("=");
-      }
-    } else if (Object.prototype.hasOwnProperty.call(OPERATORS, label)) {
-      performOperation(OPERATORS[label]);
-    } else {
-      inputDigit(label);
-    }
+    if (label === "AC") clear();
+    else if (label === "DEL") deleteDigit();
+    else if (label === "=") compute();
+    else if (label === "ANS") appendAns();
+    else if (["%", "±", "√", "x²", "1/x"].includes(label)) applyUnary(label);
+    else if (OPERATORS[label]) chooseOp(OPERATORS[label]);
+    else appendDigit(label);
+  };
+
+  const formatDisplay = (expr) => {
+    if (expr === "Error") return expr;
+    let formatted = expr.replace(/\d+\.?\d*/g, (match) => {
+      const [integer, decimal] = match.split(".");
+      if (!integer) return match;
+      const intDisplay = parseInt(integer, 10).toLocaleString("en");
+      return decimal !== undefined ? `${intDisplay}.${decimal}` : intDisplay;
+    });
+    return formatted.replace(/\*/g, "×").replace(/\//g, "÷").replace(/-/g, "−");
   };
 
   const buttonStyle = (label) => {
@@ -262,7 +183,7 @@ export default function App() {
     return styles.numberText;
   };
 
-  const displayFontSize = display.length > 10 ? 34 : display.length > 7 ? 42 : 52;
+  const displayFontSize = equation.length > 10 ? 34 : equation.length > 7 ? 42 : 52;
 
   return (
     <View style={styles.screen}>
@@ -276,18 +197,29 @@ export default function App() {
           </View>
 
           <View style={styles.display}>
-            <Text style={styles.expression} numberOfLines={1}>
-              {expression}
-            </Text>
-            <Text
-              style={[styles.result, { fontSize: displayFontSize }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              accessibilityRole="text"
-              accessibilityLabel={`Display ${display}`}
+            <ScrollView
+              horizontal
+              ref={scrollRef}
+              showsHorizontalScrollIndicator={false}
+              style={{ width: "100%" }} // Forces ScrollView to stay inside container
+              onContentSizeChange={() =>
+                scrollRef.current?.scrollToEnd({ animated: true })
+              }
+              contentContainerStyle={{
+                flexGrow: 1,
+                justifyContent: "flex-end", // Keeps text to the right when short
+                alignItems: "center",
+              }}
             >
-              {display}
-            </Text>
+              <Text
+                style={[styles.result, { fontSize: displayFontSize }]}
+                numberOfLines={1}
+                accessibilityRole="text"
+                accessibilityLabel={`Display ${equation}`}
+              >
+                {formatDisplay(equation)}
+              </Text>
+            </ScrollView>
           </View>
 
           <View style={styles.keypad}>
@@ -311,7 +243,6 @@ export default function App() {
             ))}
           </View>
         </View>
-
       </View>
     </View>
   );
@@ -357,8 +288,8 @@ const styles = StyleSheet.create({
   },
   display: {
     minHeight: 102,
-    justifyContent: "flex-end",
-    alignItems: "flex-end",
+    justifyContent: "center", // Changed: Centers the ScrollView vertically
+    // REMOVED: alignItems: "flex-end" (This was breaking the scroll boundary)
     backgroundColor: "#F0F6FF",
     borderWidth: 1,
     borderColor: "#D8E7FA",
@@ -366,13 +297,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 14,
-  },
-  expression: {
-    color: "#71849E",
-    fontSize: 12,
-    fontWeight: "500",
-    minHeight: 16,
-    marginBottom: 4,
+    overflow: "hidden", // Added: Ensures text never clips outside the rounded corners
   },
   result: {
     color: "#111827",
