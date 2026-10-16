@@ -92,6 +92,7 @@ export default function App() {
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
         body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #0f172a; }
         .calculator { width: 100%; max-width: 340px; background: #1e293b; border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .app-header { text-align: center; color: #38bdf8; font-size: 0.95rem; font-weight: 600; margin-bottom: 16px; letter-spacing: 0.5px; }
         .display { background: #0f172a; border-radius: 12px; padding: 20px 16px; text-align: right; margin-bottom: 20px; min-height: 84px; display: flex; flex-direction: column; justify-content: space-between; word-break: break-all; }
         .previous-operand { color: #94a3b8; font-size: 1rem; min-height: 20px; }
         .current-operand { color: #f8fafc; font-size: 2.2rem; font-weight: 600; line-height: 1.1; }
@@ -106,6 +107,7 @@ export default function App() {
       `}</style>
 
       <div className="calculator">
+        <div className="app-header">Calculator by Danica Mae T. Radovan</div>
         <div className="display">
           <div className="previous-operand">
             {formatDisplay(calc.previous)} {calc.operation && calc.operation.replace('*', '×').replace('/', '÷')}
