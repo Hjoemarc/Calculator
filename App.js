@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import {
   StatusBar,
@@ -26,6 +27,91 @@ const OPERATORS = {
   "+": "+",
 };
 
+// Safe arithmetic parser: supports +, -, *, / and parentheses.
+function evaluateExpression(input) {
+  const tokens = input.match(/\d*\.?\d+|[+\-*/()]/g);
+
+  if (!tokens || tokens.join("") !== input.replace(/\s/g, "")) {
+    throw new Error("Invalid expression");
+  }
+
+  let index = 0;
+
+  function expression() {
+    let value = term();
+
+    while (tokens[index] === "+" || tokens[index] === "-") {
+      const op = tokens[index++];
+      const right = term();
+      value = op === "+" ? value + right : value - right;
+    }
+
+    return value;
+  }
+
+  function term() {
+    let value = factor();
+
+    while (tokens[index] === "*" || tokens[index] === "/") {
+      const op = tokens[index++];
+      const right = factor();
+
+      if (op === "/" && right === 0) {
+        throw new Error("Division by zero");
+      }
+
+      value = op === "*" ? value * right : value / right;
+    }
+
+    return value;
+  }
+
+  function factor() {
+    const token = tokens[index];
+
+    if (token === "+") {
+      index++;
+      return factor();
+    }
+
+    if (token === "-") {
+      index++;
+      return -factor();
+    }
+
+    if (token === "(") {
+      index++;
+      const value = expression();
+
+      if (tokens[index] !== ")") {
+        throw new Error("Missing closing parenthesis");
+      }
+
+      index++;
+      return value;
+    }
+
+    if (token === undefined || !/^\d*\.?\d+$/.test(token)) {
+      throw new Error("Invalid number");
+    }
+
+    index++;
+    return Number(token);
+  }
+
+  const result = expression();
+
+  if (index !== tokens.length || !Number.isFinite(result)) {
+    throw new Error("Invalid result");
+  }
+
+  return result;
+}
+
+function cleanNumber(value) {
+  return String(Math.round(value * 1e10) / 1e10);
+}
+
 export default function App() {
   const [equation, setEquation] = useState("0");
   const [evaluated, setEvaluated] = useState(false);
@@ -34,6 +120,27 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const scrollRef = useRef(null);
 
+  const formatDisplay = (expr) => {
+    if (expr === "Error") return expr;
+
+    return expr
+      .replace(/\*/g, "×")
+      .replace(/\//g, "÷")
+      .replace(/-/g, "−")
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const addToHistory = (expr, result) => {
+    setHistory((prev) => [
+      {
+        id: `${Date.now()}-${Math.random()}`,
+        expression: formatDisplay(expr),
+        result: cleanNumber(result),
+      },
+      ...prev,
+    ]);
+  };
+
   const clear = () => {
     setEquation("0");
     setEvaluated(false);
@@ -41,11 +148,13 @@ export default function App() {
 
   const deleteDigit = () => {
     if (evaluated || equation === "Error") {
-      setEquation("0");
-      setEvaluated(false);
+      clear();
       return;
     }
-    setEquation((prev) => (prev.length === 1 ? "0" : prev.slice(0, -1)));
+
+    setEquation((prev) =>
+      prev.length <= 1 ? "0" : prev.slice(0, -1)
+    );
   };
 
   const appendDigit = (num) => {
@@ -54,103 +163,115 @@ export default function App() {
       setEvaluated(false);
       return;
     }
+
     setEquation((prev) => {
       if (num === ".") {
-        const match = prev.match(/(\d+\.?\d*)$/);
-        if (match && match[0].includes(".")) return prev;
+        const currentNumber = prev.split(/[+\-*/]/).pop();
+
+        if (currentNumber.includes(".")) return prev;
+
+        return prev + ".";
       }
-      if (prev === "0" && num !== ".") return num;
+
+      if (prev === "0") return num;
+
       return prev + num;
     });
   };
 
   const chooseOp = (op) => {
     if (equation === "Error") return;
+
     setEvaluated(false);
+
     setEquation((prev) => {
-      const lastChar = prev.slice(-1);
-      if (["+", "-", "*", "/"].includes(lastChar)) {
+      if (prev === "0" && op !== "-") return prev + op;
+
+      if (["+", "-", "*", "/"].includes(prev.slice(-1))) {
         return prev.slice(0, -1) + op;
       }
+
       return prev + op;
     });
   };
 
-  const addToHistory = (expr, res) => {
-    const newItem = {
-      id: Date.now().toString(),
-      expression: formatDisplay(expr),
-      result: formatDisplay(res),
-    };
-    setHistory((prev) => [newItem, ...prev]);
-  };
-
   const applyUnary = (operation) => {
     if (equation === "Error") return;
+
     try {
-      let mathExpr = equation;
-      if (["+", "-", "*", "/"].includes(mathExpr.slice(-1))) {
-        mathExpr = mathExpr.slice(0, -1);
-      }
-      // eslint-disable-next-line no-eval
-      let val = eval(mathExpr);
-      let res = 0;
+      let expr = equation;
 
-      let exprLabel = `${operation}(${mathExpr})`;
-      if (operation === "%") {
-        res = val / 100;
-        exprLabel = `${mathExpr}%`;
-      } else if (operation === "±") {
-        res = val * -1;
-        exprLabel = `neg(${mathExpr})`;
-      } else if (operation === "√") res = Math.sqrt(val);
-      else if (operation === "x²") {
-        res = val * val;
-        exprLabel = `${mathExpr}²`;
-      } else if (operation === "1/x") {
-        res = 1 / val;
-        exprLabel = `1/${mathExpr}`;
+      if (["+", "-", "*", "/"].includes(expr.slice(-1))) {
+        expr = expr.slice(0, -1);
       }
 
-      if (!isFinite(res) || isNaN(res)) {
-        setEquation("Error");
-        return;
+      const value = evaluateExpression(expr);
+      let result;
+
+      switch (operation) {
+        case "%":
+          result = value / 100;
+          break;
+        case "±":
+          result = -value;
+          break;
+        case "√":
+          if (value < 0) throw new Error("Invalid square root");
+          result = Math.sqrt(value);
+          break;
+        case "x²":
+          result = value * value;
+          break;
+        case "1/x":
+          if (value === 0) throw new Error("Division by zero");
+          result = 1 / value;
+          break;
+        default:
+          return;
       }
 
-      res = Math.round(res * 1e10) / 1e10;
-      addToHistory(exprLabel, res.toString());
-      setEquation(res.toString());
-      setLastAnswer(res.toString());
+      if (!Number.isFinite(result)) {
+        throw new Error("Invalid result");
+      }
+
+      result = cleanNumber(result);
+      addToHistory(
+        operation === "√" ? `√(${expr})` :
+        operation === "x²" ? `${expr}²` :
+        operation === "1/x" ? `1/(${expr})` :
+        operation === "±" ? `-(${expr})` :
+        `${expr}%`,
+        result
+      );
+
+      setEquation(result);
+      setLastAnswer(result);
       setEvaluated(true);
-    } catch (e) {
+    } catch {
       setEquation("Error");
+      setEvaluated(true);
     }
   };
 
   const compute = () => {
     if (equation === "Error") return;
+
     try {
-      let mathExpr = equation;
-      if (["+", "-", "*", "/"].includes(mathExpr.slice(-1))) {
-        mathExpr = mathExpr.slice(0, -1);
-      }
-      // eslint-disable-next-line no-eval
-      let res = eval(mathExpr);
+      let expr = equation;
 
-      if (!isFinite(res) || isNaN(res)) {
-        setEquation("Error");
-        return;
+      if (["+", "-", "*", "/"].includes(expr.slice(-1))) {
+        expr = expr.slice(0, -1);
       }
 
-      const originalExpr = equation;
-      res = Math.round(res * 1e10) / 1e10;
-      addToHistory(originalExpr, res.toString());
+      const result = cleanNumber(evaluateExpression(expr));
 
-      setEquation(res.toString());
-      setLastAnswer(res.toString());
+      addToHistory(equation, result);
+      setEquation(result);
+      setLastAnswer(result);
       setEvaluated(true);
-    } catch (e) {
+    } catch {
       setEquation("Error");
+      setEvaluated(true);
     }
   };
 
@@ -168,107 +289,122 @@ export default function App() {
     else if (label === "DEL") deleteDigit();
     else if (label === "=") compute();
     else if (label === "ANS") appendAns();
-    else if (["%", "±", "√", "x²", "1/x"].includes(label)) applyUnary(label);
-    else if (OPERATORS[label]) chooseOp(OPERATORS[label]);
-    else appendDigit(label);
-  };
-
-  const formatDisplay = (expr) => {
-    if (expr === "Error") return expr;
-    let formatted = expr.replace(/\d+\.?\d*/g, (match) => {
-      const [integer, decimal] = match.split(".");
-      if (!integer) return match;
-      const intDisplay = parseInt(integer, 10).toLocaleString("en");
-      return decimal !== undefined ? `${intDisplay}.${decimal}` : intDisplay;
-    });
-    return formatted.replace(/\*/g, "×").replace(/\//g, "÷").replace(/-/g, "−");
+    else if (["%", "±", "√", "x²", "1/x"].includes(label)) {
+      applyUnary(label);
+    } else if (OPERATORS[label]) {
+      chooseOp(OPERATORS[label]);
+    } else {
+      appendDigit(label);
+    }
   };
 
   const buttonStyle = (label) => {
+    if (label === "=") return styles.equalsButton;
     if (["AC", "DEL", "ANS"].includes(label)) return styles.actionButton;
     if (["√", "x²", "1/x"].includes(label)) return styles.scientificButton;
-    if (label === "=") return styles.equalsButton;
-    if (Object.prototype.hasOwnProperty.call(OPERATORS, label)) {
-      return styles.operatorButton;
-    }
-    if (label === "%" || label === "±") return styles.utilityButton;
+    if (OPERATORS[label]) return styles.operatorButton;
+    if (["%", "±"].includes(label)) return styles.utilityButton;
     return styles.numberButton;
   };
 
   const buttonTextStyle = (label) => {
     if (label === "=") return styles.equalsText;
     if (["AC", "DEL", "ANS"].includes(label)) return styles.actionText;
-    if (Object.prototype.hasOwnProperty.call(OPERATORS, label)) {
-      return styles.operatorText;
-    }
-    if (["√", "x²", "1/x", "ANS"].includes(label)) {
-      return styles.scientificText;
-    }
-    if (label === "AC" || label === "DEL" || label === "%" || label === "±") {
-      return styles.utilityText;
-    }
+    if (OPERATORS[label]) return styles.operatorText;
+    if (["√", "x²", "1/x"].includes(label)) return styles.scientificText;
+    if (["%", "±"].includes(label)) return styles.utilityText;
     return styles.numberText;
   };
 
-  const displayFontSize = equation.length > 10 ? 34 : equation.length > 7 ? 42 : 52;
+  const displayFontSize =
+    equation.length > 15 ? 25 :
+    equation.length > 10 ? 32 :
+    equation.length > 7 ? 40 : 50;
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#EEF2FB" />
+      <StatusBar barStyle="light-content" backgroundColor="#160D2B" />
+
+      <View style={styles.orbOne} />
+      <View style={styles.orbTwo} />
+      <View style={styles.orbThree} />
+
       <View style={styles.content}>
-        <View style={styles.calculatorCard}>
+        <View style={styles.card}>
           <View style={styles.header}>
-            <View style={styles.heading}>
-              <Text style={styles.title}>CALCULATOR</Text>
+            <View style={styles.titleRow}>
+              <View style={styles.logo}>
+                <Text style={styles.logoText}>ƒ</Text>
+              </View>
+
+              <View>
+                <Text style={styles.title}>CALCULATOR</Text>
+                <Text style={styles.subtitle}>SMART & SIMPLE</Text>
+              </View>
             </View>
+
             <TouchableOpacity
               style={styles.historyButton}
               onPress={() => setShowHistory(true)}
-              activeOpacity={0.75}
               accessibilityRole="button"
-              accessibilityLabel="View History"
             >
-              <Text style={styles.historyButtonText}>History</Text>
+              <Text style={styles.historyButtonText}>◷ History</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.display}>
+            <View style={styles.displayHeader}>
+              <Text style={styles.displayLabel}>
+                {evaluated ? "RESULT" : "ENTER EXPRESSION"}
+              </Text>
+              <Text style={styles.ready}>● READY</Text>
+            </View>
+
             <ScrollView
               horizontal
               ref={scrollRef}
               showsHorizontalScrollIndicator={false}
-              style={{ width: "100%" }}
               onContentSizeChange={() =>
                 scrollRef.current?.scrollToEnd({ animated: true })
               }
-              contentContainerStyle={{
-                flexGrow: 1,
-                justifyContent: "flex-end",
-                alignItems: "center",
-              }}
+              contentContainerStyle={styles.displayScroll}
             >
               <Text
-                style={[styles.result, { fontSize: displayFontSize }]}
+                style={[
+                  styles.result,
+                  { fontSize: displayFontSize },
+                  evaluated && styles.finalResult,
+                  equation === "Error" && styles.errorResult,
+                ]}
                 numberOfLines={1}
-                accessibilityRole="text"
-                accessibilityLabel={`Display ${equation}`}
               >
                 {formatDisplay(equation)}
               </Text>
             </ScrollView>
+
+            <View style={styles.answerRow}>
+              <View style={styles.answerLine} />
+              <Text style={styles.answerText}>
+                ANS: {formatDisplay(lastAnswer)}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.keypad}>
             {BUTTON_ROWS.map((row, rowIndex) => (
-              <View style={styles.buttonRow} key={`row-${rowIndex}`}>
-                {row.map((label) => (
+              <View style={styles.buttonRow} key={rowIndex}>
+                {row.map((label, index) => (
                   <TouchableOpacity
                     key={label}
-                    activeOpacity={0.72}
+                    activeOpacity={0.65}
+                    onPress={() => handlePress(label)}
                     accessibilityRole="button"
                     accessibilityLabel={label === "DEL" ? "Delete" : label}
-                    onPress={() => handlePress(label)}
-                    style={[styles.button, buttonStyle(label)]}
+                    style={[
+                      styles.button,
+                      index !== row.length - 1 && styles.buttonSpacing,
+                      buttonStyle(label),
+                    ]}
                   >
                     <Text style={[styles.buttonText, buttonTextStyle(label)]}>
                       {label}
@@ -278,43 +414,66 @@ export default function App() {
               </View>
             ))}
           </View>
+
+          <View style={styles.footer}>
+            <View style={styles.footerLine} />
+            <Text style={styles.footerText}>PURPLE GLASS EDITION</Text>
+            <View style={styles.footerLine} />
+          </View>
         </View>
       </View>
 
-      {/* History Modal */}
       <Modal
         visible={showHistory}
         animationType="slide"
-        transparent={true}
+        transparent
         onRequestClose={() => setShowHistory(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Calculation History</Text>
-              <TouchableOpacity onPress={() => setShowHistory(false)}>
-                <Text style={styles.closeButtonText}>✕ Close</Text>
+              <View>
+                <Text style={styles.modalEyebrow}>YOUR CALCULATIONS</Text>
+                <Text style={styles.modalTitle}>History</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowHistory(false)}
+              >
+                <Text style={styles.closeText}>✕</Text>
               </TouchableOpacity>
             </View>
 
             {history.length === 0 ? (
               <View style={styles.emptyHistory}>
-                <Text style={styles.emptyHistoryText}>No history yet.</Text>
+                <Text style={styles.emptyIcon}>◷</Text>
+                <Text style={styles.emptyTitle}>No calculations yet</Text>
+                <Text style={styles.emptyText}>
+                  Your calculations will appear here.
+                </Text>
               </View>
             ) : (
               <FlatList
                 data={history}
                 keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.historyList}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={styles.historyItem}
                     onPress={() => {
                       setEquation(item.result);
+                      setLastAnswer(item.result);
+                      setEvaluated(true);
                       setShowHistory(false);
                     }}
                   >
-                    <Text style={styles.historyExpr}>{item.expression} =</Text>
-                    <Text style={styles.historyRes}>{item.result}</Text>
+                    <Text style={styles.historyExpr}>{item.expression}</Text>
+                    <Text style={styles.historyResult}>
+                      = {formatDisplay(item.result)}
+                    </Text>
                   </TouchableOpacity>
                 )}
               />
@@ -325,9 +484,16 @@ export default function App() {
                 style={styles.clearHistoryButton}
                 onPress={() => setHistory([])}
               >
-                <Text style={styles.clearHistoryText}>Clear History</Text>
+                <Text style={styles.clearHistoryText}>Clear All History</Text>
               </TouchableOpacity>
             )}
+
+            <TouchableOpacity
+              style={styles.doneButton}
+              onPress={() => setShowHistory(false)}
+            >
+              <Text style={styles.doneText}>Done</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -338,212 +504,398 @@ export default function App() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#EEF2FB",
+    backgroundColor: "#160D2B",
     justifyContent: "center",
     paddingHorizontal: 16,
+    paddingVertical: 12,
+    overflow: "hidden",
+  },
+  orbOne: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: "#7628D8",
+    opacity: 0.24,
+    top: -70,
+    right: -90,
+  },
+  orbTwo: {
+    position: "absolute",
+    width: 230,
+    height: 230,
+    borderRadius: 115,
+    backgroundColor: "#4530BD",
+    opacity: 0.22,
+    bottom: -40,
+    left: -90,
+  },
+  orbThree: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "#C084FC",
+    opacity: 0.08,
+    top: "40%",
+    right: -90,
   },
   content: {
     width: "100%",
     maxWidth: 426,
     alignSelf: "center",
   },
-  calculatorCard: {
-    backgroundColor: "#fbfcff",
-    borderRadius: 28,
+  card: {
+    backgroundColor: "rgba(48, 32, 76, 0.96)",
+    borderRadius: 30,
     borderWidth: 1,
-    borderColor: "#9bb4d9",
-    padding: 18,
-    shadowColor: "#243860",
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 8,
+    borderColor: "rgba(221, 194, 255, 0.3)",
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.35,
+    shadowRadius: 28,
+    elevation: 12,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 14,
+    justifyContent: "space-between",
+    marginBottom: 18,
   },
-  heading: {
-    flex: 1,
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  logo: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "rgba(192, 132, 252, 0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(216, 180, 254, 0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  logoText: {
+    color: "#E9D5FF",
+    fontSize: 28,
+    fontWeight: "700",
   },
   title: {
-    color: "#8A94AD",
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 2,
+    color: "#F5EEFF",
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  subtitle: {
+    color: "#B7A2D7",
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 1.5,
+    marginTop: 4,
   },
   historyButton: {
-    backgroundColor: "#F4D84A",
+    backgroundColor: "rgba(192, 132, 252, 0.15)",
     borderWidth: 1,
-    borderColor: "#E7C83A",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
-    shadowColor: "#E7C83A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: "rgba(216, 180, 254, 0.28)",
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 13,
   },
   historyButtonText: {
-    color: "#4A3B00",
-    fontSize: 13,
+    color: "#E9D5FF",
+    fontSize: 12,
     fontWeight: "700",
   },
   display: {
-    minHeight: 102,
-    justifyContent: "center",
-    backgroundColor: "#9d9d9d",
+    minHeight: 150,
+    backgroundColor: "rgba(16, 9, 32, 0.75)",
     borderWidth: 1,
-    borderColor: "#E1E7F0",
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 14,
+    borderColor: "rgba(216, 180, 254, 0.23)",
+    borderRadius: 22,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    marginBottom: 17,
     overflow: "hidden",
   },
+  displayHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  displayLabel: {
+    color: "#A995C9",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  ready: {
+    color: "#C4B5FD",
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  displayScroll: {
+    flexGrow: 1,
+    minHeight: 52,
+    justifyContent: "center",
+    alignItems: "flex-end",
+  },
   result: {
-    color: "#e7eeff",
+    color: "#F5EEFF",
+    fontWeight: "500",
+    letterSpacing: 0.5,
+  },
+  finalResult: {
+    color: "#D8B4FE",
+    fontWeight: "700",
+  },
+  errorResult: {
+    color: "#FDA4AF",
+  },
+  answerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  answerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(216, 180, 254, 0.16)",
+    marginRight: 10,
+  },
+  answerText: {
+    color: "#A995C9",
+    fontSize: 10,
     fontWeight: "600",
-    maxWidth: "100%",
   },
-  keypad: {
-    gap: 9,
-  },
+  keypad: {},
   buttonRow: {
     flexDirection: "row",
-    gap: 9,
+    marginBottom: 9,
   },
   button: {
     flex: 1,
-    height: 56,
+    height: 55,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+  },
+  buttonSpacing: {
+    marginRight: 9,
   },
   numberButton: {
-    backgroundColor: "#007bf6",
-    borderWidth: 1,
-    borderColor: "#E1E7F0",
+    backgroundColor: "rgba(174, 145, 220, 0.12)",
+    borderColor: "rgba(216, 180, 254, 0.17)",
   },
   utilityButton: {
-    backgroundColor: "#8b919e",
+    backgroundColor: "rgba(167, 139, 250, 0.2)",
+    borderColor: "rgba(196, 181, 253, 0.25)",
   },
   actionButton: {
-    backgroundColor: "#DCE3F5",
+    backgroundColor: "rgba(192, 132, 252, 0.15)",
+    borderColor: "rgba(216, 180, 254, 0.25)",
   },
   scientificButton: {
-    backgroundColor: "#EAEFFB",
-    borderWidth: 1,
-    borderColor: "#DCE3F5",
+    backgroundColor: "rgba(126, 87, 194, 0.22)",
+    borderColor: "rgba(196, 181, 253, 0.22)",
   },
   operatorButton: {
-    backgroundColor: "#0eeeee",
+    backgroundColor: "rgba(139, 92, 246, 0.25)",
+    borderColor: "rgba(196, 181, 253, 0.3)",
   },
   equalsButton: {
-    backgroundColor: "#3558E0",
-    shadowColor: "#3558E0",
+    backgroundColor: "#A855F7",
+    borderColor: "#C084FC",
+    elevation: 5,
+    shadowColor: "#A855F7",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.35,
     shadowRadius: 8,
-    elevation: 3,
   },
   buttonText: {
     fontSize: 20,
     fontWeight: "600",
   },
   numberText: {
-    color: "#1F2A44",
+    color: "#F5EEFF",
+    fontSize: 21,
   },
   utilityText: {
-    color: "#4A5A8A",
+    color: "#E9D5FF",
     fontSize: 18,
   },
   actionText: {
-    color: "#4A5A8A",
-    fontSize: 17,
+    color: "#E9D5FF",
+    fontSize: 14,
+    fontWeight: "700",
   },
   scientificText: {
-    color: "#4A5A8A",
-    fontSize: 16,
-    fontWeight: "600",
+    color: "#D8B4FE",
+    fontSize: 15,
+    fontWeight: "700",
   },
   operatorText: {
-    color: "#3558E0",
+    color: "#D8B4FE",
     fontSize: 25,
   },
   equalsText: {
-    color: "#FFFFFF",
-    fontSize: 25,
+    color: "#FFF",
+    fontSize: 27,
+    fontWeight: "800",
+  },
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  footerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(216, 180, 254, 0.15)",
+  },
+  footerText: {
+    color: "#A995C9",
+    fontSize: 8,
     fontWeight: "700",
+    letterSpacing: 1.5,
+    marginHorizontal: 8,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(8, 4, 18, 0.78)",
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#241638",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    padding: 20,
-    maxHeight: "70%",
-    minHeight: 300,
+    borderWidth: 1,
+    borderColor: "rgba(216, 180, 254, 0.22)",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 24,
+    maxHeight: "80%",
+    minHeight: 330,
+  },
+  modalHandle: {
+    alignSelf: "center",
+    width: 42,
+    height: 4,
+    borderRadius: 4,
+    backgroundColor: "#79628F",
+    marginBottom: 20,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 18,
+    paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: "#EDF3FA",
-    paddingBottom: 10,
+    borderBottomColor: "rgba(216, 180, 254, 0.13)",
+  },
+  modalEyebrow: {
+    color: "#B7A2D7",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginBottom: 5,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#183B68",
+    fontSize: 25,
+    fontWeight: "800",
+    color: "#F5EEFF",
   },
-  closeButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#557095",
+  closeButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: "rgba(192, 132, 252, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(216, 180, 254, 0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeText: {
+    fontSize: 17,
+    color: "#D8B4FE",
+    fontWeight: "700",
   },
   emptyHistory: {
-    paddingVertical: 40,
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
+    paddingVertical: 30,
   },
-  emptyHistoryText: {
-    color: "#8FA3BE",
-    fontSize: 16,
+  emptyIcon: {
+    color: "#D8B4FE",
+    fontSize: 38,
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    color: "#F5EEFF",
+    fontSize: 17,
+    fontWeight: "700",
+    marginBottom: 7,
+  },
+  emptyText: {
+    color: "#A995C9",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  historyList: {
+    paddingBottom: 8,
   },
   historyItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F6FF",
+    backgroundColor: "rgba(174, 145, 220, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(216, 180, 254, 0.13)",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
   },
   historyExpr: {
-    color: "#6B7C93",
-    fontSize: 14,
+    color: "#B7A2D7",
+    fontSize: 13,
     textAlign: "right",
+    marginBottom: 8,
   },
-  historyRes: {
-    color: "#111827",
-    fontSize: 20,
-    fontWeight: "700",
+  historyResult: {
+    color: "#F5EEFF",
+    fontSize: 21,
+    fontWeight: "800",
     textAlign: "right",
   },
   clearHistoryButton: {
-    marginTop: 15,
-    backgroundColor: "#FEE2E2",
-    padding: 12,
-    borderRadius: 12,
+    marginTop: 8,
+    backgroundColor: "rgba(251, 113, 133, 0.09)",
+    borderWidth: 1,
+    borderColor: "rgba(251, 113, 133, 0.22)",
+    padding: 13,
+    borderRadius: 14,
     alignItems: "center",
   },
   clearHistoryText: {
-    color: "#DC2626",
-    fontWeight: "600",
+    color: "#FDA4AF",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  doneButton: {
+    marginTop: 10,
+    backgroundColor: "#8B5CF6",
+    borderWidth: 1,
+    borderColor: "#A78BFA",
+    padding: 14,
+    borderRadius: 15,
+    alignItems: "center",
+  },
+  doneText: {
+    color: "#FFF",
+    fontWeight: "800",
     fontSize: 15,
   },
 });
