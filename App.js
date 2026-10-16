@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   },
   utilityText: {
     color: "#7742D8",
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "700",
   },
 
