@@ -298,7 +298,7 @@ export default function App() {
         .btn:hover { filter: brightness(1.15); }
       `}</style>
 
-      <div className="calculator">
+      <div className="calculator" style={{ backgroundColor: "#2f72ca" }}>
         <div className="app-header">Calculator By Danica Mae T. Radovan</div>
         <div className="display">
           <div className="previous-operand">
