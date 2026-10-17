@@ -4,13 +4,17 @@ import React, { useState, useEffect } from 'react';
 // Modified by Diana Rose Mantos
 // New design: Gradient background, glass effect, color themes, calculation history, and scientific buttons.
 // Added: memory buttons (MC/MR/M+/M−) and tap-to-copy result
+// Modified by Milagrace Diane Obongen
+// Custom Midnight Blue and Purple color themegit status
+
 
 const THEMES = [
-  { name: 'Midnight', bg: '#11369c', card: '#1e1b4b', display: '#0b0f1a', num: '#4338ca', fn: '#5b21b6', op: '#ec4899', eq: '#06b6d4', text: '#f8fafc', sub: '#94a3b8' },
+  { name: 'Mila Blue', bg: '#191970', card: '#172033', display: '#0F172A', num: '#263449', fn: '#5b21b6', op: '#ec4899', eq: '#8B5CF6', text: '#f8fafc', sub: '#94a3b8' },
   { name: 'Ocean', bg: '#031c2b', card: '#0c4a6e', display: '#06283d', num: '#0369a1', fn: '#0e7490', op: '#f59e0b', eq: '#10b981', text: '#f0f9ff', sub: '#7dd3fc' },
   { name: 'Sunset', bg: '#e13a9ec1', card: '#7c2d12', display: '#3b0d1f', num: '#9a3412', fn: '#be123c', op: '#facc15', eq: '#fb7185', text: '#fff7ed', sub: '#fdba74' },
   { name: 'Light', bg: '#e2e8f0', card: '#ffffff', display: '#f1f5f9', num: '#e2e8f0', fn: '#cbd5e1', op: '#6366f1', eq: '#10b981', text: '#0f172a', sub: '#64748b' },
 ];
+
 
 const SYMBOLS = { '+': '+', '-': '−', '*': '×', '/': '÷' };
 const INITIAL = { current: '0', previous: '', operation: null, resetScreen: false };
