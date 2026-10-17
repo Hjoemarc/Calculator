@@ -202,7 +202,6 @@ export default function App() {
     });
   };
 
-  // Scientific calculator functions
   const unary = (type) => {
     if (calc.current === 'Error') return;
 
@@ -246,7 +245,6 @@ export default function App() {
     });
   };
 
-  // ANS uses the most recent calculation result
   const ans = () => {
     if (history.length === 0) return;
 
@@ -257,7 +255,6 @@ export default function App() {
     });
   };
 
-  // Memory functions (Diana Rose Mantos)
   const memClear = () => setMemory(0);
 
   const memRecall = () => {
@@ -271,7 +268,6 @@ export default function App() {
     setCalc({ ...calc, resetScreen: true });
   };
 
-  // Copy the current result to the clipboard (Diana Rose Mantos)
   const copyResult = () => {
     if (calc.current === 'Error') return;
     if (navigator.clipboard) navigator.clipboard.writeText(calc.current);
@@ -279,7 +275,6 @@ export default function App() {
     setTimeout(() => setCopied(false), 1200);
   };
 
-  // Keyboard support
   useEffect(() => {
     const onKey = (e) => {
       const k = e.key;
@@ -346,15 +341,15 @@ export default function App() {
 
         .calculator {
           width: 100%;
-          max-width: 360px;
-          background: color-mix(in srgb, var(--card) 88%, transparent);
-          border: 1px solid rgba(255,255,255,0.16);
-          border-radius: 30px;
-          padding: 22px;
+          max-width: 375px;
+          background: color-mix(in srgb, var(--card) 85%, transparent);
+          border: 1px solid rgba(255,255,255,0.18);
+          border-radius: 32px;
+          padding: 24px;
           box-shadow:
-            0 24px 70px rgba(0,0,0,0.38),
-            inset 0 1px 0 rgba(255,255,255,0.12);
-          backdrop-filter: blur(18px);
+            0 28px 75px rgba(0,0,0,0.4),
+            inset 0 1px 0 rgba(255,255,255,0.2);
+          backdrop-filter: blur(20px);
           transition: background 0.4s ease, transform 0.25s ease;
         }
 
@@ -364,7 +359,7 @@ export default function App() {
           align-items: center;
           flex-wrap: wrap;
           gap: 8px;
-          margin-bottom: 14px;
+          margin-bottom: 16px;
         }
 
         .brand {
@@ -380,7 +375,7 @@ export default function App() {
           font-weight: 500;
           font-size: 0.72rem;
           letter-spacing: 0.02em;
-          margin-top: 5px;
+          margin-top: 3px;
         }
 
         .top-actions {
@@ -390,49 +385,51 @@ export default function App() {
 
         .chip {
           white-space: nowrap;
-          border: none;
+          border: 1px solid rgba(255,255,255,0.1);
           border-radius: 999px;
-          padding: 6px 12px;
+          padding: 6px 14px;
           font-size: 0.75rem;
           font-weight: 600;
           cursor: pointer;
           background: var(--display);
           color: var(--text);
+          box-shadow: inset 0 1px 2px rgba(255,255,255,0.08);
+          transition: all 0.2s ease;
         }
 
         .chip:hover {
-          filter: brightness(1.2);
+          filter: brightness(1.25);
+          border-color: rgba(255,255,255,0.25);
         }
 
         .display {
           background: linear-gradient(
             145deg,
             var(--display),
-            color-mix(in srgb, var(--display) 72%, var(--eq))
+            color-mix(in srgb, var(--display) 70%, var(--eq))
           );
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 20px;
-          padding: 20px 16px;
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 22px;
+          padding: 20px 18px;
           text-align: right;
           margin-bottom: 20px;
-          min-height: 108px;
+          min-height: 112px;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
           word-break: break-all;
-          box-shadow: inset 0 3px 12px rgba(0,0,0,0.16);
-          transition: background 0.4s ease;
+          box-shadow: inset 0 4px 16px rgba(0,0,0,0.2);
         }
 
         .previous-operand {
           color: var(--sub);
-          font-size: 1rem;
+          font-size: 0.95rem;
           min-height: 20px;
         }
 
         .current-operand {
           color: var(--text);
-          font-size: 2.35rem;
+          font-size: 2.4rem;
           font-weight: 750;
           line-height: 1.1;
           letter-spacing: -0.04em;
@@ -441,108 +438,116 @@ export default function App() {
         .keypad {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 11px;
+          gap: 12px;
         }
 
         .btn {
-          height: 58px;
-          font-size: 1.2rem;
+          height: 56px;
+          font-size: 1.15rem;
           font-weight: 650;
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 18px;
+          border-radius: 16px;
           cursor: pointer;
-          transition:
-            filter 0.15s ease,
-            transform 0.12s ease,
-            box-shadow 0.15s ease;
           user-select: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .btn:active {
-          transform: scale(0.93);
+          transform: scale(0.92);
         }
 
-        .btn:hover {
-          filter: brightness(1.15);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-        }
-
-        /* Cyberpunk Neon Design Styles */
+        /* Redesigned Beautiful Button Archetypes */
         .btn-num {
-          background: color-mix(in srgb, var(--display) 90%, black);
+          background: linear-gradient(145deg, color-mix(in srgb, var(--num) 30%, var(--display)), color-mix(in srgb, var(--display) 85%, #000));
           color: var(--text);
-          border-radius: 14px;
-          border: 1.5px solid color-mix(in srgb, var(--eq) 60%, transparent);
-          box-shadow: 0 0 10px color-mix(in srgb, var(--eq) 20%, transparent);
-          font-weight: 700;
-          transition: all 0.2s ease;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15);
         }
 
         .btn-num:hover {
-          border-color: var(--eq);
-          box-shadow: 0 0 16px color-mix(in srgb, var(--eq) 50%, transparent);
-          filter: brightness(1.2);
-        }
-
-        .btn-num:active {
-          transform: scale(0.95);
+          background: linear-gradient(145deg, color-mix(in srgb, var(--num) 45%, var(--display)), color-mix(in srgb, var(--display) 75%, #000));
+          border-color: color-mix(in srgb, var(--eq) 50%, transparent);
+          box-shadow: 0 6px 16px color-mix(in srgb, var(--eq) 25%, transparent), inset 0 1px 2px rgba(255, 255, 255, 0.25);
+          filter: brightness(1.1);
         }
 
         .btn-fn {
-          background: linear-gradient(
-            145deg,
-            var(--fn),
-            color-mix(in srgb, var(--fn) 75%, #ffffff)
-          );
+          background: linear-gradient(145deg, color-mix(in srgb, var(--fn) 85%, #fff), var(--fn));
           color: var(--text);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+          font-size: 0.95rem;
+          font-weight: 700;
+        }
+
+        .btn-fn:hover {
+          filter: brightness(1.15);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.4);
         }
 
         .btn-sci {
-          background: var(--display);
+          background: linear-gradient(145deg, color-mix(in srgb, var(--display) 90%, #fff), var(--display));
+          color: var(--sub);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          font-size: 0.95rem;
+          font-weight: 600;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .btn-sci:hover {
           color: var(--text);
-          font-size: 1rem;
+          background: linear-gradient(145deg, color-mix(in srgb, var(--display) 75%, var(--eq)), var(--display));
+          border-color: rgba(255,255,255,0.2);
         }
 
         .btn-mem {
           height: 40px;
           background: transparent;
           color: var(--eq);
-          border: 1px solid var(--eq);
+          border: 1px solid color-mix(in srgb, var(--eq) 50%, transparent);
           border-radius: 12px;
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           font-weight: 700;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.04em;
+          box-shadow: inset 0 1px 2px color-mix(in srgb, var(--eq) 10%, transparent);
         }
 
         .btn-mem:hover {
-          background: color-mix(in srgb, var(--eq) 22%, transparent);
+          background: color-mix(in srgb, var(--eq) 18%, transparent);
+          border-color: var(--eq);
+          box-shadow: 0 0 12px color-mix(in srgb, var(--eq) 25%, transparent);
         }
 
         .btn-op {
-          background: color-mix(in srgb, var(--display) 85%, black);
+          background: linear-gradient(145deg, color-mix(in srgb, var(--op) 30%, var(--display)), color-mix(in srgb, var(--display) 85%, #000));
           color: var(--op);
-          border-radius: 14px;
-          border: 1.5px solid color-mix(in srgb, var(--op) 70%, transparent);
-          font-size: 1.4rem;
+          border: 1.5px solid color-mix(in srgb, var(--op) 60%, transparent);
+          font-size: 1.35rem;
           font-weight: 800;
-          box-shadow: 0 0 12px color-mix(in srgb, var(--op) 30%, transparent);
-          transition: all 0.2s ease;
+          box-shadow: 0 4px 14px color-mix(in srgb, var(--op) 20%, transparent), inset 0 1px 1px rgba(255, 255, 255, 0.15);
         }
 
         .btn-op:hover {
           border-color: var(--op);
-          box-shadow: 0 0 20px color-mix(in srgb, var(--op) 60%, transparent);
-          filter: brightness(1.3);
+          background: linear-gradient(145deg, color-mix(in srgb, var(--op) 45%, var(--display)), color-mix(in srgb, var(--display) 70%, #000));
+          box-shadow: 0 6px 20px color-mix(in srgb, var(--op) 45%, transparent), inset 0 1px 2px rgba(255, 255, 255, 0.25);
+          filter: brightness(1.2);
         }
 
         .btn-eq {
-          background: var(--eq);
+          background: linear-gradient(145deg, var(--eq), color-mix(in srgb, var(--eq) 70%, #000));
           color: #000;
-          border-radius: 14px;
           border: 1.5px solid var(--eq);
           font-size: 1.4rem;
           font-weight: 900;
-          box-shadow: 0 0 16px color-mix(in srgb, var(--eq) 70%, transparent);
+          box-shadow: 0 6px 20px color-mix(in srgb, var(--eq) 50%, transparent), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-eq:hover {
+          filter: brightness(1.15);
+          box-shadow: 0 8px 24px color-mix(in srgb, var(--eq) 70%, transparent), inset 0 1px 3px rgba(255, 255, 255, 0.6);
         }
 
         .history {
@@ -574,10 +579,13 @@ export default function App() {
           margin-bottom: 8px;
           text-align: right;
           cursor: pointer;
+          border: 1px solid rgba(255,255,255,0.05);
+          transition: all 0.2s ease;
         }
 
         .history-item:hover {
           filter: brightness(1.2);
+          border-color: rgba(255,255,255,0.15);
         }
 
         .history-item .expr {
@@ -602,7 +610,7 @@ export default function App() {
           color: var(--sub);
           font-size: 0.72rem;
           text-align: center;
-          margin-top: 16px;
+          margin-top: 18px;
           letter-spacing: 0.04em;
         }
 
@@ -643,26 +651,30 @@ export default function App() {
           border-radius: 10px;
           padding: 6px 8px;
           font-size: 0.9rem;
+          outline: none;
         }
 
         .btn-conv {
           grid-column: 1 / -1;
-          height: 44px;
-          background: var(--display);
+          height: 48px;
+          background: linear-gradient(145deg, color-mix(in srgb, var(--display) 90%, #fff), var(--display));
           color: var(--text);
-          font-size: 1rem;
+          font-size: 0.95rem;
+          font-weight: 700;
           border-radius: 14px;
+          border: 1px solid rgba(255,255,255,0.15);
         }
 
         .btn-conv.active {
-          background: var(--eq);
-          color: #ffffff;
+          background: linear-gradient(145deg, var(--eq), color-mix(in srgb, var(--eq) 70%, #000));
+          color: #000;
+          border-color: var(--eq);
         }
 
         @media (max-width: 420px) {
           .calculator {
-            padding: 16px;
-            border-radius: 24px;
+            padding: 18px;
+            border-radius: 26px;
           }
 
           .btn {
@@ -684,16 +696,12 @@ export default function App() {
             height: 36px;
           }
 
-          .btn-conv {
-            height: 44px;
-          }
-
           .keypad {
-            gap: 8px;
+            gap: 10px;
           }
 
           .current-operand {
-            font-size: 2rem;
+            font-size: 2.1rem;
           }
         }
       `}</style>
@@ -887,7 +895,7 @@ export default function App() {
               className={`btn btn-conv ${convertMode ? 'active' : ''}`}
               onClick={() => setConvertMode(!convertMode)}
             >
-              {convertMode ? '← Calculator' : '⇄ Convert'}
+              {convertMode ? '← Calculator' : '⇄ Convert Currency'}
             </button>
           </div>
 
