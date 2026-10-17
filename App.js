@@ -8,6 +8,8 @@ import React, { useState, useEffect } from 'react';
 // Custom Midnight Blue and Purple color theme
 // Modified by Juliana Jane E. Jumawan
 // Customization: Pink Bloom theme and updated calculator design
+// Modified by <Wilhelm Ceniza>
+// Added Colorblind Safe theme (Okabe-Ito palette) and fixed convert button contrast and also added more currency rates
 
 const THEMES = [
   { name: 'Mila Blue', bg: '#191970', card: '#172033', display: '#0F172A', num: '#263449', fn: '#5b21b6', op: '#ec4899', eq: '#8B5CF6', text: '#f8fafc', sub: '#94a3b8' },
@@ -15,6 +17,7 @@ const THEMES = [
   { name: 'Sunset', bg: '#e13a9ec1', card: '#7c2d12', display: '#3b0d1f', num: '#9a3412', fn: '#be123c', op: '#facc15', eq: '#fb7185', text: '#fff7ed', sub: '#fdba74' },
   { name: 'Light', bg: '#e2e8f0', card: '#ffffff', display: '#f1f5f9', num: '#e2e8f0', fn: '#cbd5e1', op: '#6366f1', eq: '#10b981', text: '#0f172a', sub: '#64748b' },
   { name: 'Juliana Bloom', bg: '#FFF0F6', card: '#FFFFFF', display: '#FFF7FB', num: '#FCE7F3', fn: '#86255c', op: '#DB2777', eq: '#10B981', text: '#831843', sub: '#BE185D' },
+  { name: 'Colorblind Safe', bg: '#111827', card: '#1f2937', display: '#0f172a', num: '#374151', fn: '#0072B2', op: '#E69F00', eq: '#56B4E9', text: '#FFFFFF', sub: '#CBD5E1' },
 ];
 
 
@@ -22,7 +25,7 @@ const SYMBOLS = { '+': '+', '-': '−', '*': '×', '/': '÷' };
 const INITIAL = { current: '0', previous: '', operation: null, resetScreen: false };
 
 // Money converter added by Lander Fernando
-const RATES = { Peso: 62.9, USD: 1, JPY: 158, EUR: 0.89, KRW: 1340 };
+const RATES = { Peso: 62.9, USD: 1, JPY: 158, EUR: 0.89, KRW: 1340, GBP: 0.78, AUD: 1.52, CNY: 7.2, SGD: 1.34 };
 
 const formatDisplay = (num) => {
   if (num === 'Error' || num === '' || num.includes('e')) return num;
@@ -673,7 +676,7 @@ export default function App() {
 
         .btn-conv.active {
           background: linear-gradient(145deg, var(--eq), color-mix(in srgb, var(--eq) 70%, #000));
-          color: #ad8484;
+          color: #000;
           border-color: var(--eq);
         }
 
