@@ -829,14 +829,14 @@ export default function App() {
                 }
                 title="Change theme"
               >
-                🎨 {t.name}
+                 {t.name}
               </button>
 
               <button
                 className="chip"
                 onClick={() => setShowHistory((visible) => !visible)}
               >
-                🕘 History
+                 History
               </button>
             </div>
           </div>
