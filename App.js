@@ -13,6 +13,9 @@ const THEMES = [
 const SYMBOLS = { '+': '+', '-': '−', '*': '×', '/': '÷' };
 const INITIAL = { current: '0', previous: '', operation: null, resetScreen: false };
 
+// Money converter added by Lander Fernando
+const RATES = { Peso: 62.9, USD: 1, JPY: 158, EUR: 0.89, KRW: 1340 };
+
 const formatDisplay = (num) => {
   if (num === 'Error' || num === '' || num.includes('e')) return num;
 
@@ -50,8 +53,23 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [themeIndex, setThemeIndex] = useState(0);
+  const [convertMode, setConvertMode] = useState(false);
+  const [fromCur, setFromCur] = useState('Peso');
+  const [toCur, setToCur] = useState('USD');
 
   const t = THEMES[themeIndex];
+
+    const converted =
+    calc.current === 'Error'
+      ? 'Error'
+      : ((parseFloat(calc.current) / RATES[fromCur]) * RATES[toCur]).toLocaleString('en', {
+          maximumFractionDigits: 2,
+        });
+
+  const swapCurrencies = () => {
+    setFromCur(toCur);
+    setToCur(fromCur);
+  };
 
   const addHistory = (expression, result) =>
     setHistory((h) => [{ expression, result }, ...h].slice(0, 20));
@@ -534,6 +552,58 @@ export default function App() {
           margin-top: 16px;
           letter-spacing: 0.04em;
         }
+    
+         .converter-display {
+          justify-content: center;
+          gap: 14px;
+        }
+
+        .conv-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          width: 100%;
+        }
+
+        .conv-divider {
+          height: 1px;
+          width: 100%;
+          background: rgba(255,255,255,0.15);
+        }
+
+        .conv-amount {
+          flex: 1;
+          min-width: 0;
+          color: var(--text);
+          font-size: 1.8rem;
+          font-weight: 750;
+          letter-spacing: -0.03em;
+          text-align: right;
+          word-break: break-all;
+        }
+
+        .converter-display select {
+          background: var(--card);
+          color: var(--text);
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 10px;
+          padding: 6px 8px;
+          font-size: 0.9rem;
+        }
+
+                .btn-conv {
+          grid-column: 1 / -1;
+          height: 44px;
+          background: var(--display);
+          color: var(--text);
+          font-size: 1rem;
+        }
+
+        .btn-conv.active {
+          background: var(--eq);
+          color: #ffffff;
+        }
 
         @media (max-width: 420px) {
           .calculator {
@@ -544,6 +614,24 @@ export default function App() {
           .btn {
             height: 52px;
             border-radius: 14px;
+          }
+
+                    .page {
+            align-items: flex-start;
+            padding: 12px 12px 40px;
+          }
+
+          .display {
+            min-height: 96px;
+            margin-bottom: 14px;
+          }
+
+          .btn {
+            height: 48px;
+          }
+
+          .btn-conv {
+            height: 44px;
           }
 
           .keypad {
@@ -582,7 +670,7 @@ export default function App() {
               </button>
             </div>
           </div>
-
+          {!convertMode && (
           <div className="display">
             <div className="previous-operand">
               {formatDisplay(calc.previous)}{' '}
@@ -593,6 +681,31 @@ export default function App() {
               {formatDisplay(calc.current)}
             </div>
           </div>
+          )}
+
+          {convertMode && (
+            <div className="display converter-display">
+              <div className="conv-row">
+                <select value={fromCur} onChange={(e) => setFromCur(e.target.value)}>
+                  {Object.keys(RATES).map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <div className="conv-amount">{formatDisplay(calc.current)}</div>
+              </div>
+
+              <div className="conv-divider" />
+
+              <div className="conv-row">
+                <select value={toCur} onChange={(e) => setToCur(e.target.value)}>
+                  {Object.keys(RATES).map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <div className="conv-amount">{converted}</div>
+              </div>
+            </div>
+          )}
 
           <div className="keypad">
             <button className="btn btn-sci" onClick={() => unary('sqrt')}>
@@ -690,6 +803,14 @@ export default function App() {
             <button className="btn btn-eq" onClick={compute}>
               =
             </button>
+
+              <button
+              className={`btn btn-conv ${convertMode ? 'active' : ''}`}
+              onClick={() => setConvertMode(!convertMode)}
+            >
+               {convertMode ? '← Calculator' : '⇄ Convert'}
+            </button>
+
           </div>
 
           <div className="signature">
