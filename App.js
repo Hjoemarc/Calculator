@@ -1,640 +1,957 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef } from "react";
 import {
-  View,
+  StatusBar,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  ScrollView
-} from 'react-native';
+  View,
+  ScrollView,
+  Modal,
+  FlatList,
+} from "react-native";
 
-const KEYS = [
-  'AC', 'DEL', '%', '÷',
-  '7', '8', '9', '×',
-  '4', '5', '6', '−',
-  '1', '2', '3', '+',
-  '00', '0', '.', '='
+const STANDARD_BUTTONS = [
+  ["√", "x²", "1/x", "ANS"],
+  ["AC", "DEL", "%", "÷"],
+  ["7", "8", "9", "×"],
+  ["4", "5", "6", "−"],
+  ["1", "2", "3", "+"],
+  ["±", "0", ".", "="],
 ];
 
-const OPERATORS = ['+', '−', '×', '÷'];
+const SCIENTIFIC_BUTTONS = [
+  ["sin", "cos", "tan", "π"],
+  ["log", "ln", "(", ")"],
+  ["√", "x²", "1/x", "ANS"],
+  ["AC", "DEL", "%", "÷"],
+  ["7", "8", "9", "×"],
+  ["4", "5", "6", "−"],
+  ["1", "2", "3", "+"],
+  ["±", "0", ".", "="],
+];
 
-function evaluateExpression(expression) {
-  const normalized = expression.replace(/[×÷−]/g, (char) => ({
-    '×': '*',
-    '÷': '/',
-    '−': '-'
-  })[char]);
+const OPERATORS = {
+  "÷": "/",
+  "×": "*",
+  "−": "-",
+  "+": "+",
+};
 
-  if (!/^[0-9+\-*/().\s]+$/.test(normalized)) {
-    throw new Error('Invalid expression');
-  }
+// Safe arithmetic parser extended for scientific functions
+function evaluateExpression(input) {
+  // Pre-process scientific functions or replace constants if needed
+  let processedInput = input
+    .replace(/π/g, Math.PI)
+    .replace(/sin\(/g, "Math.sin(")
+    .replace(/cos\(/g, "Math.cos(")
+    .replace(/tan\(/g, "Math.tan(")
+    .replace(/log\(/g, "Math.log10(")
+    .replace(/ln\(/g, "Math.log(");
 
-  const tokens = normalized.match(/\d*\.?\d+|[()+*/-]/g);
+  const tokens = processedInput.match(/Math\.\w+|\d*\.?\d+|[+\-*/()]/g);
 
-  if (!tokens || tokens.join('') !== normalized.replace(/\s/g, '')) {
-    throw new Error('Invalid expression');
+  if (!tokens) {
+    throw new Error("Invalid expression");
   }
 
   let index = 0;
 
-  function parseExpression() {
-    let value = parseTerm();
+  function expression() {
+    let value = term();
 
-    while (tokens[index] === '+' || tokens[index] === '-') {
-      const operator = tokens[index++];
-      const next = parseTerm();
-      value = operator === '+' ? value + next : value - next;
+    while (tokens[index] === "+" || tokens[index] === "-") {
+      const op = tokens[index++];
+      const right = term();
+      value = op === "+" ? value + right : value - right;
     }
 
     return value;
   }
 
-  function parseTerm() {
-    let value = parseFactor();
+  function term() {
+    let value = factor();
 
-    while (tokens[index] === '*' || tokens[index] === '/') {
-      const operator = tokens[index++];
-      const next = parseFactor();
+    while (tokens[index] === "*" || tokens[index] === "/") {
+      const op = tokens[index++];
+      const right = factor();
 
-      if (operator === '/' && next === 0) {
-        throw new Error('Cannot divide by zero');
+      if (op === "/" && right === 0) {
+        throw new Error("Division by zero");
       }
 
-      value = operator === '*' ? value * next : value / next;
+      value = op === "*" ? value * right : value / right;
     }
 
     return value;
   }
 
-  function parseFactor() {
-    if (tokens[index] === '-') {
+  function factor() {
+    const token = tokens[index];
+
+    if (!token) throw new Error("Unexpected end of expression");
+
+    if (token.startsWith("Math.")) {
+      const funcName = token;
       index++;
-      return -parseFactor();
+      if (tokens[index] !== "(") throw new Error("Missing parenthesis after function");
+      index++; // skip '('
+      const val = expression();
+      if (tokens[index] !== ")") throw new Error("Missing closing parenthesis");
+      index++; // skip ')'
+
+      switch (funcName) {
+        case "Math.sin": return Math.sin(val);
+        case "Math.cos": return Math.cos(val);
+        case "Math.tan": return Math.tan(val);
+        case "Math.log10": return Math.log10(val);
+        case "Math.log": return Math.log(val);
+        default: throw new Error("Unknown function");
+      }
     }
 
-    if (tokens[index] === '+') {
+    if (token === "+") {
       index++;
-      return parseFactor();
+      return factor();
     }
 
-    if (tokens[index] === '(') {
+    if (token === "-") {
       index++;
-      const value = parseExpression();
+      return -factor();
+    }
 
-      if (tokens[index] !== ')') {
-        throw new Error('Invalid expression');
+    if (token === "(") {
+      index++;
+      const value = expression();
+
+      if (tokens[index] !== ")") {
+        throw new Error("Missing closing parenthesis");
       }
 
       index++;
       return value;
     }
 
-    const token = tokens[index++];
-
-    if (token === undefined || !/^\d*\.?\d+$/.test(token)) {
-      throw new Error('Invalid expression');
+    if (!/^\d*\.?\d+$/.test(token)) {
+      throw new Error("Invalid number");
     }
 
+    index++;
     return Number(token);
   }
 
-  const value = parseExpression();
+  const result = expression();
 
-  if (index !== tokens.length || !Number.isFinite(value)) {
-    throw new Error('Invalid expression');
+  if (index !== tokens.length || !Number.isFinite(result)) {
+    throw new Error("Invalid result");
   }
 
-  return Number(value.toPrecision(12));
+  return result;
+}
+
+function cleanNumber(value) {
+  return String(Math.round(value * 1e10) / 1e10);
 }
 
 export default function App() {
-  const [expression, setExpression] = useState('');
-  const [result, setResult] = useState('0');
-  const [finished, setFinished] = useState(false);
+  const [equation, setEquation] = useState("0");
+  const [evaluated, setEvaluated] = useState(false);
+  const [lastAnswer, setLastAnswer] = useState("0");
   const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [isScientific, setIsScientific] = useState(false);
+  const scrollRef = useRef(null);
 
-  const press = (key) => {
-    if (key === 'AC') {
-      setExpression('');
-      setResult('0');
-      setFinished(false);
-      return;
-    }
+  const formatDisplay = (expr) => {
+    if (expr === "Error") return expr;
 
-    if (key === 'DEL') {
-      if (finished) {
-        setExpression('');
-        setResult('0');
-        setFinished(false);
-      } else {
-        setExpression((previous) => previous.slice(0, -1));
-      }
-      return;
-    }
-
-    if (key === '=') {
-      if (!expression) return;
-
-      try {
-        const answer = evaluateExpression(expression);
-        const formatted = String(answer);
-
-        setHistory((previous) => [
-          { expression, result: formatted },
-          ...previous
-        ].slice(0, 5));
-
-        setResult(formatted);
-        setExpression('');
-        setFinished(true);
-      } catch {
-        setResult('Invalid');
-        setExpression('');
-        setFinished(false);
-      }
-
-      return;
-    }
-
-    if (key === '%') {
-      const current = expression || (finished ? result : '');
-
-      if (current && Number.isFinite(Number(current))) {
-        setExpression(String(Number(current) / 100));
-        setFinished(false);
-      }
-      return;
-    }
-
-    if (key === '.') {
-      const source = finished ? '' : expression;
-      const lastNumber = source.split(/[+\-×÷*/]/).pop();
-
-      if (lastNumber.includes('.')) return;
-
-      setExpression(source + (source === '' ? '0.' : '.'));
-      setFinished(false);
-      return;
-    }
-
-    const isOperator = OPERATORS.includes(key);
-
-    setExpression((previous) => {
-      let source = finished && !isOperator ? '' : previous;
-
-      if (finished && isOperator) {
-        source = result;
-      }
-
-      if (isOperator && !source && key !== '−') return source;
-
-      if (isOperator && /[+\-×÷]$/.test(source)) {
-        return source.slice(0, -1) + key;
-      }
-
-      return source + key;
-    });
-
-    setFinished(false);
+    return expr
+      .replace(/\*/g, "×")
+      .replace(/\//g, "÷")
+      .replace(/-/g, "−");
   };
 
+  const addToHistory = (expr, result) => {
+    setHistory((prev) => [
+      {
+        id: `${Date.now()}-${Math.random()}`,
+        expression: formatDisplay(expr),
+        result: cleanNumber(result),
+      },
+      ...prev,
+    ]);
+  };
+
+  const clear = () => {
+    setEquation("0");
+    setEvaluated(false);
+  };
+
+  const deleteDigit = () => {
+    if (evaluated || equation === "Error") {
+      clear();
+      return;
+    }
+
+    setEquation((prev) =>
+      prev.length <= 1 ? "0" : prev.slice(0, -1)
+    );
+  };
+
+  const appendDigit = (num) => {
+    if (evaluated || equation === "Error") {
+      setEquation(num === "." ? "0." : num);
+      setEvaluated(false);
+      return;
+    }
+
+    setEquation((prev) => {
+      if (num === ".") {
+        const currentNumber = prev.split(/[+\-*/()]/).pop();
+        if (currentNumber.includes(".")) return prev;
+        return prev + ".";
+      }
+
+      if (prev === "0" && num !== ".") return num;
+
+      return prev + num;
+    });
+  };
+
+  const chooseOp = (op) => {
+    if (equation === "Error") return;
+
+    setEvaluated(false);
+
+    setEquation((prev) => {
+      if (prev === "0" && op !== "-") return prev + op;
+      return prev + op;
+    });
+  };
+
+  const applyScientificFunc = (func) => {
+    if (equation === "Error") return;
+    setEvaluated(false);
+
+    setEquation((prev) => {
+      if (prev === "0") {
+        return `${func}(`;
+      }
+      return prev + `${func}(`;
+    });
+  };
+
+  const applyUnary = (operation) => {
+    if (equation === "Error") return;
+
+    try {
+      let expr = equation;
+      const value = evaluateExpression(expr);
+      let result;
+
+      switch (operation) {
+        case "%":
+          result = value / 100;
+          break;
+        case "±":
+          result = -value;
+          break;
+        case "√":
+          if (value < 0) throw new Error("Invalid square root");
+          result = Math.sqrt(value);
+          break;
+        case "x²":
+          result = value * value;
+          break;
+        case "1/x":
+          if (value === 0) throw new Error("Division by zero");
+          result = 1 / value;
+          break;
+        case "π":
+          result = Math.PI;
+          break;
+        default:
+          return;
+      }
+
+      if (!Number.isFinite(result)) {
+        throw new Error("Invalid result");
+      }
+
+      result = cleanNumber(result);
+      addToHistory(
+        operation === "√" ? `√(${expr})` :
+        operation === "x²" ? `${expr}²` :
+        operation === "1/x" ? `1/(${expr})` :
+        operation === "±" ? `-(${expr})` :
+        `${expr}%`,
+        result
+      );
+
+      setEquation(result);
+      setLastAnswer(result);
+      setEvaluated(true);
+    } catch {
+      setEquation("Error");
+      setEvaluated(true);
+    }
+  };
+
+  const compute = () => {
+    if (equation === "Error") return;
+
+    try {
+      let expr = equation;
+      const result = cleanNumber(evaluateExpression(expr));
+
+      addToHistory(equation, result);
+      setEquation(result);
+      setLastAnswer(result);
+      setEvaluated(true);
+    } catch {
+      setEquation("Error");
+      setEvaluated(true);
+    }
+  };
+
+  const appendAns = () => {
+    if (evaluated || equation === "Error" || equation === "0") {
+      setEquation(lastAnswer);
+      setEvaluated(false);
+    } else {
+      setEquation((prev) => prev + lastAnswer);
+    }
+  };
+
+  const handlePress = (label) => {
+    if (label === "AC") clear();
+    else if (label === "DEL") deleteDigit();
+    else if (label === "=") compute();
+    else if (label === "ANS") appendAns();
+    else if (["sin", "cos", "tan", "log", "ln"].includes(label)) {
+      applyScientificFunc(label);
+    } else if (label === "π") {
+      appendDigit(String(Math.PI));
+    } else if (["%", "±", "√", "x²", "1/x"].includes(label)) {
+      applyUnary(label);
+    } else if (OPERATORS[label]) {
+      chooseOp(OPERATORS[label]);
+    } else {
+      appendDigit(label);
+    }
+  };
+
+  const buttonStyle = (label) => {
+    if (label === "=") return styles.equalsButton;
+    if (["AC", "DEL", "ANS"].includes(label)) return styles.actionButton;
+    if (["√", "x²", "1/x", "sin", "cos", "tan", "log", "ln", "π"].includes(label)) return styles.scientificButton;
+    if (OPERATORS[label]) return styles.operatorButton;
+    if (["%", "±", "(", ")"].includes(label)) return styles.utilityButton;
+    return styles.numberButton;
+  };
+
+  const buttonTextStyle = (label) => {
+    if (label === "=") return styles.equalsText;
+    if (["AC", "DEL", "ANS"].includes(label)) return styles.actionText;
+    if (OPERATORS[label]) return styles.operatorText;
+    if (["√", "x²", "1/x", "sin", "cos", "tan", "log", "ln", "π"].includes(label)) return styles.scientificText;
+    if (["%", "±", "(", ")"].includes(label)) return styles.utilityText;
+    return styles.numberText;
+  };
+
+  const activeButtons = isScientific ? SCIENTIFIC_BUTTONS : STANDARD_BUTTONS;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#201629" />
+    <View style={styles.screen}>
+      <StatusBar barStyle="light-content" backgroundColor="#160D2B" />
 
-      <View style={styles.background}>
-        <View style={styles.glowOne} />
-        <View style={styles.glowTwo} />
+      <View style={styles.orbOne} />
+      <View style={styles.orbTwo} />
+      <View style={styles.orbThree} />
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.topBar}>
-            <View>
-              <Text style={styles.eyebrow}>YOUR DAILY ESSENTIAL</Text>
-              <Text style={styles.appTitle}>Cherry<Text style={styles.titleAccent}>Calc.</Text></Text>
+      <View style={styles.content}>
+        <View style={styles.card}>
+          <View style={styles.header}>
+            <View style={styles.titleRow}>
+              <View style={styles.logo}>
+                <Text style={styles.logoText}>ƒ</Text>
+              </View>
+
+              <View>
+                <Text style={styles.title}>CALCULATOR</Text>
+                <Text style={styles.subtitle}>{isScientific ? "SCIENTIFIC MODE" : "STANDARD MODE"}</Text>
+              </View>
             </View>
 
-            <View style={styles.topIcon}>
-              <Text style={styles.topIconText}>✿</Text>
+            <View style={styles.headerButtons}>
+              {/* Scientific Toggle Button */}
+              <TouchableOpacity
+                style={[styles.historyButton, isScientific && styles.activeSciButton]}
+                onPress={() => setIsScientific(!isScientific)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.historyButtonText}>{isScientific ? "Standard" : "Sci"}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.historyButton}
+                onPress={() => setShowHistory(true)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.historyButtonText}>◷</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.calculator}>
-            <View style={styles.displayTop}>
-              <View style={styles.statusDot} />
-              <Text style={styles.displayCaption}>CALCULATOR</Text>
-              <Text style={styles.displayHeart}>♡</Text>
+          <View style={styles.display}>
+            <View style={styles.displayHeader}>
+              <Text style={styles.displayLabel}>
+                {evaluated ? "RESULT" : "ENTER EXPRESSION"}
+              </Text>
+              <Text style={styles.ready}>● READY</Text>
             </View>
 
-            <View style={styles.displayScreen}>
-              <Text style={styles.expressionText} numberOfLines={2}>
-                {expression || ' '}
-              </Text>
-
+            <ScrollView
+              horizontal
+              ref={scrollRef}
+              showsHorizontalScrollIndicator={false}
+              onContentSizeChange={() =>
+                scrollRef.current?.scrollToEnd({ animated: true })
+              }
+              contentContainerStyle={styles.displayScroll}
+            >
               <Text
-                style={styles.resultText}
+                style={[
+                  styles.result,
+                  { fontSize: equation.length > 15 ? 22 : 36 },
+                  evaluated && styles.finalResult,
+                  equation === "Error" && styles.errorResult,
+                ]}
                 numberOfLines={1}
-                adjustsFontSizeToFit
               >
-                {result}
+                {formatDisplay(equation)}
               </Text>
+            </ScrollView>
 
-              <View style={styles.resultUnderline} />
+            <View style={styles.answerRow}>
+              <View style={styles.answerLine} />
+              <Text style={styles.answerText}>
+                ANS: {formatDisplay(lastAnswer)}
+              </Text>
             </View>
+          </View>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerIcon}>✦</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.keypad}>
-              {KEYS.map((key) => {
-                const utility = ['AC', 'DEL', '%'].includes(key);
-                const operator = OPERATORS.includes(key);
-                const equals = key === '=';
-                const doubleZero = key === '00';
-
-                return (
+          <View style={styles.keypad}>
+            {activeButtons.map((row, rowIndex) => (
+              <View style={styles.buttonRow} key={rowIndex}>
+                {row.map((label, index) => (
                   <TouchableOpacity
-                    key={key}
+                    key={label + index}
                     activeOpacity={0.65}
-                    onPress={() => press(key)}
+                    onPress={() => handlePress(label)}
+                    accessibilityRole="button"
                     style={[
-                      styles.key,
-                      utility && styles.utilityKey,
-                      operator && styles.operatorKey,
-                      equals && styles.equalsKey,
-                      doubleZero && styles.doubleZeroKey
+                      styles.button,
+                      { height: isScientific ? 46 : 54 },
+                      index !== row.length - 1 && styles.buttonSpacing,
+                      buttonStyle(label),
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.keyText,
-                        utility && styles.utilityText,
-                        operator && styles.operatorText,
-                        equals && styles.equalsText
-                      ]}
-                    >
-                      {key === 'DEL' ? '⌫' : key}
+                    <Text style={[styles.buttonText, buttonTextStyle(label)]}>
+                      {label}
                     </Text>
                   </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <View style={styles.bottomNote}>
-              <Text style={styles.noteFlower}>✿</Text>
-              <Text style={styles.noteText}>a little sweetness in every sum</Text>
-              <Text style={styles.noteFlower}>✿</Text>
-            </View>
+                ))}
+              </View>
+            ))}
           </View>
 
-          <View style={styles.historySection}>
-            <View style={styles.historyHeading}>
-              <Text style={styles.historyTitle}>Recent calculations</Text>
-              <Text style={styles.historySymbol}>♡</Text>
+          <View style={styles.footer}>
+            <View style={styles.footerLine} />
+            <Text style={styles.footerText}>PURPLE GLASS EDITION</Text>
+            <View style={styles.footerLine} />
+          </View>
+        </View>
+      </View>
+
+      {/* History Modal remains the same */}
+      <Modal
+        visible={showHistory}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowHistory(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalEyebrow}>YOUR CALCULATIONS</Text>
+                <Text style={styles.modalTitle}>History</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowHistory(false)}
+              >
+                <Text style={styles.closeText}>✕</Text>
+              </TouchableOpacity>
             </View>
 
             {history.length === 0 ? (
               <View style={styles.emptyHistory}>
-                <Text style={styles.emptyIcon}>✧</Text>
-                <Text style={styles.emptyText}>Your calculations will appear here</Text>
+                <Text style={styles.emptyIcon}>◷</Text>
+                <Text style={styles.emptyTitle}>No calculations yet</Text>
+                <Text style={styles.emptyText}>Your calculations will appear here.</Text>
               </View>
             ) : (
-              history.map((item, index) => (
-                <TouchableOpacity
-                  key={`${item.expression}-${index}`}
-                  activeOpacity={0.75}
-                  style={styles.historyItem}
-                  onPress={() => {
-                    setExpression(item.expression);
-                    setResult(item.result);
-                    setFinished(false);
-                  }}
-                >
-                  <View style={styles.historyItemText}>
-                    <Text style={styles.historyExpression}>{item.expression}</Text>
-                    <Text style={styles.historyAnswer}>= {item.result}</Text>
-                  </View>
-                  <Text style={styles.historyArrow}>↗</Text>
-                </TouchableOpacity>
-              ))
+              <FlatList
+                data={history}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.historyList}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.historyItem}
+                    onPress={() => {
+                      setEquation(item.result);
+                      setLastAnswer(item.result);
+                      setEvaluated(true);
+                      setShowHistory(false);
+                    }}
+                    onLongPress={() => {
+                      setHistory((prev) => prev.filter((h) => h.id !== item.id));
+                    }}
+                  >
+                    <Text style={styles.historyExpr}>{item.expression}</Text>
+                    <Text style={styles.historyResult}>= {formatDisplay(item.result)}</Text>
+                  </TouchableOpacity>
+                )}
+              />
             )}
-          </View>
 
-          <Text style={styles.footerText}>MADE WITH LOVE AND A LITTLE MAGIC ♡</Text>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+            {history.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearHistoryButton}
+                onPress={() => setHistory([])}
+              >
+                <Text style={styles.clearHistoryText}>Clear All History</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.doneButton}
+              onPress={() => setShowHistory(false)}
+            >
+              <Text style={styles.doneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
-    backgroundColor: '#201629'
+    backgroundColor: "#080D18",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    overflow: "hidden",
   },
-  background: {
-    flex: 1,
-    backgroundColor: '#201629',
-    overflow: 'hidden'
+  orbOne: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: "#2563EB",
+    opacity: 0.18,
+    top: -70,
+    right: -90,
   },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    paddingHorizontal: 22,
-    paddingTop: 35,
-    paddingBottom: 35
+  orbTwo: {
+    position: "absolute",
+    width: 230,
+    height: 230,
+    borderRadius: 115,
+    backgroundColor: "#0EA5E9",
+    opacity: 0.13,
+    bottom: -40,
+    left: -90,
   },
-  glowOne: {
-    position: 'absolute',
-    top: 80,
-    right: -110,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: '#663A6D',
-    opacity: 0.2
+  orbThree: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "#38BDF8",
+    opacity: 0.08,
+    top: "40%",
+    right: -90,
   },
-  glowTwo: {
-    position: 'absolute',
-    bottom: 100,
-    left: -130,
-    width: 270,
-    height: 270,
-    borderRadius: 135,
-    backgroundColor: '#B84F83',
-    opacity: 0.13
+  content: {
+    width: "100%",
+    maxWidth: 426,
+    alignSelf: "center",
   },
-  topBar: {
-    width: '100%',
-    maxWidth: 390,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 27
-  },
-  eyebrow: {
-    color: '#C49AB8',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 3,
-    marginBottom: 5
-  },
-  appTitle: {
-    color: '#FFF5FA',
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -1.5
-  },
-  titleAccent: {
-    color: '#F5A9CE'
-  },
-  topIcon: {
-    width: 53,
-    height: 53,
-    borderRadius: 19,
-    backgroundColor: '#3B2942',
+  card: {
+    backgroundColor: "#111827",
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: '#69405D',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  topIconText: {
-    color: '#F5A9CE',
-    fontSize: 30
-  },
-  calculator: {
-    width: '100%',
-    maxWidth: 390,
-    padding: 21,
-    borderRadius: 30,
-    backgroundColor: '#2B2033',
-    borderWidth: 1,
-    borderColor: '#493249',
-    shadowColor: '#000000',
+    borderColor: "#263449",
+    padding: 18,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 15 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 12
+    shadowOpacity: 0.4,
+    shadowRadius: 25,
+    elevation: 12,
   },
-  displayTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 17
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 15,
   },
-  statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#F5A9CE',
-    marginRight: 8
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  displayCaption: {
-    flex: 1,
-    color: '#B99AB9',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 2.5
+  headerButtons: {
+    flexDirection: "row",
+    gap: 8,
   },
-  displayHeart: {
-    color: '#F5A9CE',
-    fontSize: 19
-  },
-  displayScreen: {
-    minHeight: 143,
-    paddingHorizontal: 17,
-    paddingVertical: 20,
-    justifyContent: 'center',
-    backgroundColor: '#211829',
+  logo: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#1E3A8A",
     borderWidth: 1,
-    borderColor: '#493249',
-    borderRadius: 22
+    borderColor: "#3B82F6",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
   },
-  expressionText: {
-    minHeight: 27,
-    color: '#BCA3C0',
-    fontSize: 18,
-    textAlign: 'right'
+  logoText: {
+    color: "#60A5FA",
+    fontSize: 24,
+    fontWeight: "800",
   },
-  resultText: {
-    color: '#FFF2FA',
-    fontSize: 43,
-    fontWeight: '700',
-    textAlign: 'right',
-    marginTop: 8
+  title: {
+    color: "#F8FAFC",
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 1.5,
   },
-  resultUnderline: {
-    width: 45,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: '#F5A9CE',
-    alignSelf: 'flex-end',
-    marginTop: 12
+  subtitle: {
+    color: "#94A3B8",
+    fontSize: 8,
+    fontWeight: "600",
+    letterSpacing: 1,
+    marginTop: 2,
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginVertical: 21
+  historyButton: {
+    backgroundColor: "#1E293B",
+    borderWidth: 1,
+    borderColor: "#334155",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  dividerLine: {
+  activeSciButton: {
+    backgroundColor: "#2563EB",
+    borderColor: "#60A5FA",
+  },
+  historyButtonText: {
+    color: "#60A5FA",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  display: {
+    minHeight: 120,
+    backgroundColor: "#020617",
+    borderWidth: 1,
+    borderColor: "#1E3A5F",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 14,
+    overflow: "hidden",
+  },
+  displayHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  displayLabel: {
+    color: "#64748B",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  ready: {
+    color: "#22C55E",
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  displayScroll: {
+    flexGrow: 1,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "flex-end",
+  },
+  result: {
+    color: "#F8FAFC",
+    fontWeight: "500",
+    letterSpacing: 0.5,
+  },
+  finalResult: {
+    color: "#38BDF8",
+    fontWeight: "800",
+  },
+  errorResult: {
+    color: "#FB7185",
+  },
+  answerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+  },
+  answerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#493249'
+    backgroundColor: "#1E293B",
+    marginRight: 8,
   },
-  dividerIcon: {
-    color: '#DDA0C6',
-    fontSize: 12
+  answerText: {
+    color: "#94A3B8",
+    fontSize: 9,
+    fontWeight: "600",
   },
-  keypad: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 12
+  keypad: {},
+  buttonRow: {
+    flexDirection: "row",
+    marginBottom: 8,
   },
-  key: {
-    width: '22.5%',
-    height: 59,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 18,
-    backgroundColor: '#403047',
+  button: {
+    flex: 1,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: '#513A54'
   },
-  keyText: {
-    color: '#FFF5FC',
-    fontSize: 20,
-    fontWeight: '700'
+  buttonSpacing: {
+    marginRight: 8,
   },
-  utilityKey: {
-    backgroundColor: '#47304C',
-    borderColor: '#6A4267'
+  numberButton: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
+  utilityButton: {
+    backgroundColor: "#172554",
+    borderColor: "#1D4ED8",
+  },
+  actionButton: {
+    backgroundColor: "#1E3A8A",
+    borderColor: "#2563EB",
+  },
+  scientificButton: {
+    backgroundColor: "#0F2747",
+    borderColor: "#1E40AF",
+  },
+  operatorButton: {
+    backgroundColor: "#1D4ED8",
+    borderColor: "#3B82F6",
+  },
+  equalsButton: {
+    backgroundColor: "#1a5945",
+    borderColor: "#0deaa0",
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  numberText: {
+    color: "#F8FAFC",
+    fontSize: 18,
+    fontWeight: "600",
   },
   utilityText: {
-    color: '#E5A9D0',
-    fontSize: 16,
-    fontWeight: '900'
+    color: "#93C5FD",
+    fontSize: 15,
+    fontWeight: "700",
   },
-  operatorKey: {
-    backgroundColor: '#F0B4D5',
-    borderColor: '#F0B4D5'
+  actionText: {
+    color: "#BFDBFE",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  scientificText: {
+    color: "#1414a1",
+    fontSize: 13,
+    fontWeight: "700",
   },
   operatorText: {
-    color: '#542846',
-    fontSize: 24,
-    fontWeight: '800'
-  },
-  equalsKey: {
-    backgroundColor: '#C9A9F5',
-    borderColor: '#D8BDFB'
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "700",
   },
   equalsText: {
-    color: '#332044',
-    fontSize: 27,
-    fontWeight: '900'
-  },
-  doubleZeroKey: {
-    width: '48%'
-  },
-  bottomNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 24
-  },
-  noteFlower: {
-    color: '#E7A7CF',
-    fontSize: 13
-  },
-  noteText: {
-    color: '#B99AB9',
-    fontSize: 10,
-    fontWeight: '600'
-  },
-  historySection: {
-    width: '100%',
-    maxWidth: 390,
-    marginTop: 30
-  },
-  historyHeading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 13
-  },
-  historyTitle: {
-    color: '#FFF1FA',
-    fontSize: 17,
-    fontWeight: '800'
-  },
-  historySymbol: {
-    color: '#F5A9CE',
-    fontSize: 22
-  },
-  emptyHistory: {
-    minHeight: 80,
-    borderWidth: 1,
-    borderColor: '#453249',
-    borderRadius: 19,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#291F31'
-  },
-  emptyIcon: {
-    color: '#DDA0C6',
+    color: "#FFFFFF",
     fontSize: 22,
-    marginBottom: 4
+    fontWeight: "800",
   },
-  emptyText: {
-    color: '#B99AB9',
-    fontSize: 11
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
   },
-  historyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    borderRadius: 16,
-    marginBottom: 9,
-    backgroundColor: '#302339',
-    borderWidth: 1,
-    borderColor: '#493249'
-  },
-  historyItemText: {
-    flex: 1
-  },
-  historyExpression: {
-    color: '#BCA3C0',
-    fontSize: 12
-  },
-  historyAnswer: {
-    color: '#F5C4DE',
-    fontSize: 17,
-    fontWeight: '800',
-    marginTop: 4
-  },
-  historyArrow: {
-    color: '#D8A4D1',
-    fontSize: 20,
-    marginLeft: 12
+  footerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#334155",
   },
   footerText: {
-    color: '#806786',
-    fontSize: 9,
-    fontWeight: '800',
+    color: "#64748B",
+    fontSize: 7,
+    fontWeight: "700",
     letterSpacing: 1.5,
-    textAlign: 'center',
-    marginTop: 28
-  }
+    marginHorizontal: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#111827",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    borderColor: "#334155",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 24,
+    maxHeight: "80%",
+    minHeight: 330,
+  },
+  modalHandle: {
+    alignSelf: "center",
+    width: 42,
+    height: 4,
+    borderRadius: 4,
+    backgroundColor: "#475569",
+    marginBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 18,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#334155",
+  },
+  modalEyebrow: {
+    color: "#94A3B8",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginBottom: 5,
+  },
+  modalTitle: {
+    fontSize: 25,
+    fontWeight: "800",
+    color: "#F8FAFC",
+  },
+  closeButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: "#1E293B",
+    borderWidth: 1,
+    borderColor: "#334155",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeText: {
+    fontSize: 17,
+    color: "#60A5FA",
+    fontWeight: "750",
+  },
+  emptyHistory: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 30,
+  },
+  emptyIcon: {
+    color: "#3B82F6",
+    fontSize: 38,
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    color: "#F8FAFC",
+    fontSize: 17,
+    fontWeight: "700",
+    marginBottom: 7,
+  },
+  emptyText: {
+    color: "#94A3B8",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  historyList: {
+    paddingBottom: 8,
+  },
+  historyItem: {
+    backgroundColor: "#1E293B",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+  },
+  historyExpr: {
+    color: "#94A3B8",
+    fontSize: 13,
+    textAlign: "right",
+    marginBottom: 8,
+  },
+  historyResult: {
+    color: "#38BDF8",
+    fontSize: 21,
+    fontWeight: "800",
+    textAlign: "right",
+  },
+  clearHistoryButton: {
+    marginTop: 8,
+    backgroundColor: "#450A0A",
+    borderWidth: 1,
+    borderColor: "#991B1B",
+    padding: 13,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  clearHistoryText: {
+    F87171: "#F87171",
+    color: "#F87171",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  doneButton: {
+    marginTop: 10,
+    backgroundColor: "#2563EB",
+    borderWidth: 1,
+    borderColor: "#3B82F6",
+    padding: 14,
+    borderRadius: 15,
+    alignItems: "center",
+  },
+  doneText: {
+    color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: 15,
+  },
 });
