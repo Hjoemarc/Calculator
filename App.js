@@ -73,7 +73,7 @@ const styles = {
     fontFamily: 'Arial', padding: 20
   },
   calculator: {
-    background: '#111827', padding: 25, borderRadius: 20,
+    background: 'hsl(11, 65%, 52%)', padding: 25, borderRadius: 20,
     width: 300, textAlign: 'center'
   },
   display: {
