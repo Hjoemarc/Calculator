@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
-// Modified by June Mark C. Undik
+// Modified by Diana Rose Mantos
 // New design: Gradient background, glass effect, color themes, calculation history, and scientific buttons.
+// Added: memory buttons (MC/MR/M+/M−) and tap-to-copy result
 
 const THEMES = [
   { name: 'Midnight', bg: '#11369c', card: '#1e1b4b', display: '#0b0f1a', num: '#4338ca', fn: '#5b21b6', op: '#ec4899', eq: '#06b6d4', text: '#f8fafc', sub: '#94a3b8' },
@@ -56,10 +57,12 @@ export default function App() {
   const [convertMode, setConvertMode] = useState(false);
   const [fromCur, setFromCur] = useState('Peso');
   const [toCur, setToCur] = useState('USD');
+  const [memory, setMemory] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   const t = THEMES[themeIndex];
 
-    const converted =
+  const converted =
     calc.current === 'Error'
       ? 'Error'
       : ((parseFloat(calc.current) / RATES[fromCur]) * RATES[toCur]).toLocaleString('en', {
@@ -256,6 +259,28 @@ export default function App() {
       current: history[0].result,
       resetScreen: false,
     });
+  };
+
+  // Memory functions (Diana Rose Mantos)
+  const memClear = () => setMemory(0);
+
+  const memRecall = () => {
+    setCalc({ ...calc, current: memory.toString(), resetScreen: true });
+  };
+
+  const memAdd = (sign) => {
+    if (calc.current === 'Error') return;
+    const value = parseFloat(calc.current);
+    setMemory((m) => Math.round((m + sign * value) * 1e12) / 1e12);
+    setCalc({ ...calc, resetScreen: true });
+  };
+
+  // Copy the current result to the clipboard (Diana Rose Mantos)
+  const copyResult = () => {
+    if (calc.current === 'Error') return;
+    if (navigator.clipboard) navigator.clipboard.writeText(calc.current);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
   };
 
   // Keyboard support
@@ -464,6 +489,20 @@ export default function App() {
           color: var(--text);
         }
 
+        .btn-mem {
+          height: 40px;
+          background: transparent;
+          color: var(--eq);
+          border: 1px solid var(--eq);
+          font-size: 0.9rem;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+        }
+
+        .btn-mem:hover {
+          background: color-mix(in srgb, var(--eq) 22%, transparent);
+        }
+
         .btn-sci {
           background: var(--display);
           color: var(--text);
@@ -552,8 +591,8 @@ export default function App() {
           margin-top: 16px;
           letter-spacing: 0.04em;
         }
-    
-         .converter-display {
+
+        .converter-display {
           justify-content: center;
           gap: 14px;
         }
@@ -592,7 +631,7 @@ export default function App() {
           font-size: 0.9rem;
         }
 
-                .btn-conv {
+        .btn-conv {
           grid-column: 1 / -1;
           height: 44px;
           background: var(--display);
@@ -616,7 +655,7 @@ export default function App() {
             border-radius: 14px;
           }
 
-                    .page {
+          .page {
             align-items: flex-start;
             padding: 12px 12px 40px;
           }
@@ -628,6 +667,10 @@ export default function App() {
 
           .btn {
             height: 48px;
+          }
+
+          .btn-mem {
+            height: 36px;
           }
 
           .btn-conv {
@@ -670,17 +713,26 @@ export default function App() {
               </button>
             </div>
           </div>
-          {!convertMode && (
-          <div className="display">
-            <div className="previous-operand">
-              {formatDisplay(calc.previous)}{' '}
-              {calc.operation && SYMBOLS[calc.operation]}
-            </div>
 
-            <div className="current-operand">
-              {formatDisplay(calc.current)}
+          {!convertMode && (
+            <div
+              className="display"
+              onClick={copyResult}
+              title="Tap to copy result"
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="previous-operand">
+                {copied
+                  ? '✓ Copied!'
+                  : `${memory !== 0 ? 'M  ' : ''}${formatDisplay(calc.previous)} ${
+                      calc.operation ? SYMBOLS[calc.operation] : ''
+                    }`}
+              </div>
+
+              <div className="current-operand">
+                {formatDisplay(calc.current)}
+              </div>
             </div>
-          </div>
           )}
 
           {convertMode && (
@@ -708,6 +760,22 @@ export default function App() {
           )}
 
           <div className="keypad">
+            <button className="btn btn-mem" onClick={memClear}>
+              MC
+            </button>
+
+            <button className="btn btn-mem" onClick={memRecall}>
+              MR
+            </button>
+
+            <button className="btn btn-mem" onClick={() => memAdd(1)}>
+              M+
+            </button>
+
+            <button className="btn btn-mem" onClick={() => memAdd(-1)}>
+              M−
+            </button>
+
             <button className="btn btn-sci" onClick={() => unary('sqrt')}>
               √
             </button>
@@ -804,13 +872,12 @@ export default function App() {
               =
             </button>
 
-              <button
+            <button
               className={`btn btn-conv ${convertMode ? 'active' : ''}`}
               onClick={() => setConvertMode(!convertMode)}
             >
-               {convertMode ? '← Calculator' : '⇄ Convert'}
+              {convertMode ? '← Calculator' : '⇄ Convert'}
             </button>
-
           </div>
 
           <div className="signature">
@@ -830,7 +897,6 @@ export default function App() {
             {history.length === 0 ? (
               <div className="empty">No calculations yet</div>
             ) : (
-
               history.map((item, i) => (
                 <div
                   key={i}
@@ -843,7 +909,6 @@ export default function App() {
                   <div className="res">{formatDisplay(item.result)}</div>
                 </div>
               ))
-
             )}
           </div>
         )}
