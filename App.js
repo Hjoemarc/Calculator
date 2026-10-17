@@ -1,90 +1,70 @@
-
 import React, { useState } from 'react';
 
+const KEYS = [
+  'AC', 'DEL', '%', '÷',
+  '7', '8', '9', '×',
+  '4', '5', '6', '−',
+  '1', '2', '3', '+',
+  '0', '.', '=',
+];
+
+const OPS = { '÷': '/', '×': '*', '−': '-', '+': '+' };
+
 export default function App() {
-  const [display, setDisplay] = useState('0');
-  const [history, setHistory] = useState([]);
+  const [expr, setExpr] = useState('');
+  const [result, setResult] = useState('0');
 
-  const press = (value) => {
-    if (value === 'AC') return setDisplay('0');
-    if (value === 'DEL') return setDisplay(display.slice(0, -1) || '0');
-    if (value === '%') return setDisplay(String(Number(display) / 100));
-
-    if (value === '=') {
+  const press = (key) => {
+    if (key === 'AC') {
+      setExpr('');
+      setResult('0');
+    } else if (key === 'DEL') {
+      setExpr(expr.slice(0, -1));
+    } else if (key === '%') {
+      setExpr(String(parseFloat(expr || result) / 100));
+    } else if (key === '=') {
       try {
-        if (!/^[0-9+\-*/.() ]+$/.test(display)) throw Error();
-        const result = Function(`"use strict"; return (${display})`)();
-        if (!Number.isFinite(result)) throw Error();
-        setHistory([`${display} = ${result}`, ...history]);
-        setDisplay(String(result));
+        const value = Function(`return ${expr.replace(/[÷×−]/g, (c) => OPS[c])}`)();
+        setResult(String(Number.isFinite(value) ? +value.toFixed(10) : 'Error'));
+        setExpr('');
       } catch {
-        setDisplay('Error');
+        setResult('Error');
+        setExpr('');
       }
-      return;
+    } else {
+      setExpr(expr + key);
     }
-
-    setDisplay(display === '0' || display === 'Error'
-      ? value : display + value);
   };
 
-  const buttons = [
-    'AC', 'DEL', '%', '/',
-    '7', '8', '9', '*',
-    '4', '5', '6', '-',
-    '1', '2', '3', '+',
-    '0', '.', '(', ')', '='
-  ];
-
   return (
-    <div style={styles.page}>
-      <div style={styles.calculator}>
-        <h2>My Calculator</h2>
-        <div style={styles.display}>{display}</div>
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#08090D', fontFamily: 'sans-serif' }}>
+      <div style={{ width: 320, padding: 20, borderRadius: 24, background: '#151720' }}>
+        <div style={{ padding: 16, marginBottom: 16, borderRadius: 16, background: '#0B0D12', color: '#F8FAFC', textAlign: 'right' }}>
+          <div style={{ minHeight: 20, color: '#9CA3AF' }}>{expr}</div>
+          <div style={{ fontSize: 36, fontWeight: 700 }}>{result}</div>
+        </div>
 
-        <div style={styles.grid}>
-          {buttons.map((b) => (
-            <button key={b} onClick={() => press(b)}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+          {KEYS.map((key) => (
+            <button
+              key={key}
+              onClick={() => press(key)}
               style={{
-                ...styles.button,
-                background: ['AC', 'DEL', '%'].includes(b)
-                  ? '#475569'
-                  : ['+', '-', '*', '/', '='].includes(b)
-                  ? '#06b6d4' : '#1e293b'
-              }}>
-              {b}
+                height: 56,
+                gridColumn: key === '=' ? 'span 2' : undefined,
+                border: 'none',
+                borderRadius: 14,
+                fontSize: 20,
+                cursor: 'pointer',
+                color: '#fff',
+                background: key in OPS || key === '=' ? '#FF4655' : '#20232D',
+              }}
+            >
+              {key}
             </button>
           ))}
         </div>
-
-        <h3>History</h3>
-        {history.slice(0, 5).map((item, i) => (
-          <p key={i}>{item}</p>
-        ))}
-        <button onClick={() => setHistory([])}>Clear History</button>
       </div>
     </div>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: '100vh', background: '#0f172a', color: 'white',
-    display: 'flex', justifyContent: 'center', alignItems: 'center',
-    fontFamily: 'Arial', padding: 20
-  },
-  calculator: {
-    background: '#111827', padding: 25, borderRadius: 20,
-    width: 300, textAlign: 'center'
-  },
-  display: {
-    background: '#020617', padding: 20, marginBottom: 15,
-    fontSize: 28, textAlign: 'right', overflowWrap: 'anywhere'
-  },
-  grid: {
-    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8
-  },
-  button: {
-    padding: 15, border: 'none', borderRadius: 8,
-    color: 'white', fontSize: 18, cursor: 'pointer'
-  }
-};
