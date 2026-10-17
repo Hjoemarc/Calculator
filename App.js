@@ -338,7 +338,7 @@ export default function App() {
               </View>
 
               <View>
-                <Text style={styles.title}>CALCULATOR</Text>
+                <Text style={styles.title}>SHEEVA SALIH'S CALCULATOR</Text>
                 <Text style={styles.subtitle}>SMART & SIMPLE</Text>
               </View>
             </View>
@@ -417,7 +417,7 @@ export default function App() {
 
           <View style={styles.footer}>
             <View style={styles.footerLine} />
-            <Text style={styles.footerText}>PURPLE GLASS EDITION</Text>
+            <Text style={styles.footerText}>GREEN CALCULATOR EDITION BY SHEEVA SALIH</Text>
             <View style={styles.footerLine} />
           </View>
         </View>
@@ -502,9 +502,9 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#160D2B",
+screen: {
+  flex: 1,
+  backgroundColor: "#123D2A",
     justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   card: {
-    backgroundColor: "rgba(48, 32, 76, 0.96)",
+    backgroundColor: "#1B4935",
     borderRadius: 30,
     borderWidth: 1,
     borderColor: "rgba(221, 194, 255, 0.3)",
@@ -688,8 +688,8 @@ const styles = StyleSheet.create({
     marginRight: 9,
   },
   numberButton: {
-    backgroundColor: "rgba(174, 145, 220, 0.12)",
-    borderColor: "rgba(216, 180, 254, 0.17)",
+    backgroundColor: "#A8E6C1",
+    borderColor: "#C7F5D8",
   },
   utilityButton: {
     backgroundColor: "rgba(167, 139, 250, 0.2)",
@@ -708,10 +708,10 @@ const styles = StyleSheet.create({
     borderColor: "rgba(196, 181, 253, 0.3)",
   },
   equalsButton: {
-    backgroundColor: "#A855F7",
-    borderColor: "#C084FC",
+    backgroundColor: "#39A96B",
+    borderColor: "#A8E6C1",
     elevation: 5,
-    shadowColor: "#A855F7",
+    shadowColor: "#39A96B",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 8,
@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   numberText: {
-    color: "#F5EEFF",
+    color: "#123D2A",
     fontSize: 21,
   },
   utilityText: {
