@@ -1,96 +1,162 @@
 import React, { useState } from 'react';
-
-const KEYS = [
-  'AC', 'DEL', '%', '÷',
-  '7', '8', '9', '×',
-  '4', '5', '6', '−',
-  '1', '2', '3', '+',
-  '0', '.', '=',
-];
-
-const OPS = { '÷': '/', '×': '*', '−': '-', '+': '+' };
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, Keyboard } from 'react-native';
 
 export default function App() {
-  const [expr, setExpr] = useState('');
-  const [result, setResult] = useState('0');
+  const [num1, setNum1] = useState('');
+  const [num2, setNum2] = useState('');
+  const [result, setResult] = useState(null);
 
-  const press = (key) => {
-    if (key === 'AC') {
-      setExpr('');
-      setResult('0');
-    } else if (key === 'DEL') {
-      setExpr(expr.slice(0, -1));
-    } else if (key === '%') {
-      setExpr(String(parseFloat(expr || result) / 100));
-    } else if (key === '=') {
-      try {
-        const value = Function(`return ${expr.replace(/[÷×−]/g, (c) => OPS[c])}`)();
-        setResult(String(Number.isFinite(value) ? +value.toFixed(10) : 'Error'));
-        setExpr('');
-      } catch {
-        setResult('Error');
-        setExpr('');
-      }
-    } else {
-      setExpr(expr + key);
+  // Simple calculation handler
+  const calculate = (operator) => {
+    const number1 = parseFloat(num1);
+    const number2 = parseFloat(num2);
+
+    if (isNaN(number1) || isNaN(number2)) {
+      alert('Please enter numbers in both fields!');
+      return;
     }
+
+    let res = 0;
+    if (operator === '+') res = number1 + number2;
+    if (operator === '-') res = number1 - number2;
+    if (operator === '*') res = number1 * number2;
+    if (operator === '/') {
+      if (number2 === 0) {
+        alert("Cannot divide by zero!");
+        return;
+      }
+      res = number1 / number2;
+    }
+
+    setResult(res);
+    Keyboard.dismiss();
+  };
+
+  // Reset inputs and result
+  const handleClear = () => {
+    setNum1('');
+    setNum2('');
+    setResult(null);
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#08090D', fontFamily: 'sans-serif' }}>
-      <div style={{ width: 320, padding: 20, borderRadius: 24, background: '#151720' }}>
-        <div style={{ padding: 16, marginBottom: 16, borderRadius: 16, background: '#0B0D12', color: '#F8FAFC', textAlign: 'right' }}>
-          <div style={{ minHeight: 20, color: '#9CA3AF' }}>{expr}</div>
-          <div style={{ fontSize: 36, fontWeight: 700 }}>{result}</div>
-        </div>
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>Simple Calculator</Text>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-          {KEYS.map((key) => (
-            <button
-              key={key}
-              onClick={() => press(key)}
-              style={{
-                height: 56,
-                gridColumn: key === '=' ? 'span 2' : undefined,
-                border: 'none',
-                borderRadius: 14,
-                fontSize: 20,
-                cursor: 'pointer',
-                color: '#fff',
-                background: key in OPS || key === '=' ? '#FF4655' : '#20232D',
-              }}
-            >
-              {key}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
+      {/* Input Fields */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="First number"
+          keyboardType="numeric"
+          value={num1}
+          onChangeText={(text) => setNum1(text)}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Second number"
+          keyboardType="numeric"
+          value={num2}
+          onChangeText={(text) => setNum2(text)}
+        />
+      </View>
+
+      {/* Operation Buttons */}
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.btn} onPress={() => calculate('+')}>
+          <Text style={styles.btnText}>+</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.btn} onPress={() => calculate('-')}>
+          <Text style={styles.btnText}>-</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.btn} onPress={() => calculate('*')}>
+          <Text style={styles.btnText}>×</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.btn} onPress={() => calculate('/')}>
+          <Text style={styles.btnText}>÷</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Clear Button */}
+      <TouchableOpacity style={styles.clearBtn} onPress={handleClear}>
+        <Text style={styles.clearBtnText}>Clear</Text>
+      </TouchableOpacity>
+
+      {/* Result Display */}
+      {result !== null && (
+        <View style={styles.resultBox}>
+          <Text style={styles.resultText}>Result: {result}</Text>
+        </View>
+      )}
+    </SafeAreaView>
   );
 }
 
-const styles = {
-  page: {
-    minHeight: '100vh', background: '#0f172a', color: 'white',
-    display: 'flex', justifyContent: 'center', alignItems: 'center',
-    fontFamily: 'Arial', padding: 20
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
   },
-  calculator: {
-    background: 'hsl(11, 65%, 52%)', padding: 25, borderRadius: 20,
-    width: 300, textAlign: 'center'
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
   },
-  display: {
-    background: '#020617', padding: 20, marginBottom: 15,
-    fontSize: 28, textAlign: 'right', overflowWrap: 'anywhere'
+  inputContainer: {
+    marginBottom: 15,
   },
-  grid: {
-    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 18,
+    marginBottom: 10,
   },
-  button: {
-    padding: 15, border: 'none', borderRadius: 8,
-    color: 'white', fontSize: 18, cursor: 'pointer'
-  }
-};
-=======
-}
->>>>>>> e8808dee3910ee9d3a4b9a579984883d6247d4ec
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  btn: {
+    backgroundColor: '#007AFF',
+    flex: 1,
+    marginHorizontal: 5,
+    paddingVertical: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  btnText: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  clearBtn: {
+    backgroundColor: '#ff3b30',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  clearBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  resultBox: {
+    marginTop: 20,
+    padding: 20,
+    backgroundColor: '#e1f5fe',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  resultText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#0288d1',
+  },
+});
