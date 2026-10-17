@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 // New design: Gradient background, glass effect, color themes, calculation history, and scientific buttons.
 // Added: memory buttons (MC/MR/M+/M−) and tap-to-copy result
 // Modified by Milagrace Diane Obongen
-// Custom Midnight Blue and Purple color themegit status
+// Custom Midnight Blue and Purple color theme
 
 
 const THEMES = [
