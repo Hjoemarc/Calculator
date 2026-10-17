@@ -703,7 +703,7 @@ export default function App() {
           <div className="topbar">
             <div className="brand">
               CALCULATOR
-              <small>by June Mark C. Undik</small>
+              <small>by June Mark</small>
             </div>
 
             <div className="top-actions">
