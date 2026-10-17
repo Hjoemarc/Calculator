@@ -634,7 +634,7 @@ export default function App() {
         .conv-divider {
           height: 1px;
           width: 100%;
-          background: rgba(255,255,255,0.15);
+          background: rgba(161, 99, 27, 0.15);
         }
 
         .conv-amount {
@@ -651,7 +651,7 @@ export default function App() {
         .converter-display select {
           background: var(--card);
           color: var(--text);
-          border: 1px solid rgba(255,255,255,0.12);
+          border: 1px solid rgba(55, 161, 175, 0.5);
           border-radius: 10px;
           padding: 6px 8px;
           font-size: 0.9rem;
@@ -666,12 +666,12 @@ export default function App() {
           font-size: 0.95rem;
           font-weight: 700;
           border-radius: 14px;
-          border: 1px solid rgba(255,255,255,0.15);
+          border: 1px solid rgba(241, 172, 21, 0.15);
         }
 
         .btn-conv.active {
           background: linear-gradient(145deg, var(--eq), color-mix(in srgb, var(--eq) 70%, #000));
-          color: #000;
+          color: #ad8484;
           border-color: var(--eq);
         }
 
