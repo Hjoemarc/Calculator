@@ -9,12 +9,17 @@ import {
 } from 'react-native';
 
 const ROWS = [
+<<<<<<< HEAD
   ['AC', 'DEL', '%', '÷'],
+=======
+  ['C', '⌫', '%', '÷'],
+>>>>>>> 00eeebba7c3564391b987a7839df251d2509fb91
   ['7', '8', '9', '×'],
   ['4', '5', '6', '-'],
   ['1', '2', '3', '+'],
   ['0', '.', '='],
 ];
+<<<<<<< HEAD
 
 const OPS = ['+', '-', '×', '÷'];
 
@@ -43,6 +48,9 @@ const compute = (a, b, op) => {
 };
 
 const format = (n) => String(parseFloat(n.toPrecision(12)));
+=======
+const OPS = ['÷', '×', '-', '+'];
+>>>>>>> 00eeebba7c3564391b987a7839df251d2509fb91
 
 export default function App() {
   const [displayValue, setDisplayValue] = useState('0');
@@ -51,6 +59,7 @@ export default function App() {
   const [justEvaluated, setJustEvaluated] = useState(false);
 
   const handleNumber = (num) => {
+<<<<<<< HEAD
     if (displayValue === 'Error' || justEvaluated) {
       setDisplayValue(num === '.' ? '0.' : num);
       setJustEvaluated(false);
@@ -58,6 +67,15 @@ export default function App() {
     }
     if (num === '.') {
       if (!displayValue.includes('.')) setDisplayValue(displayValue + '.');
+=======
+    if (displayValue === 'Error') {
+      setDisplayValue(num === '.' ? '0.' : num);
+      return;
+    }
+    if (num === '.') {
+      if (displayValue.includes('.')) return;
+      setDisplayValue(displayValue + '.');
+>>>>>>> 00eeebba7c3564391b987a7839df251d2509fb91
       return;
     }
     setDisplayValue(displayValue === '0' ? num : displayValue + num);
@@ -65,6 +83,7 @@ export default function App() {
 
   const handleOperator = (op) => {
     if (displayValue === 'Error') return;
+<<<<<<< HEAD
     // chain operations: 2 + 3 + ... evaluates 2 + 3 first
     if (operator && firstValue !== '' && !justEvaluated && displayValue !== '0') {
       const r = compute(parseFloat(firstValue), parseFloat(displayValue), operator);
@@ -73,17 +92,42 @@ export default function App() {
     } else {
       setFirstValue(displayValue);
     }
+=======
+>>>>>>> 00eeebba7c3564391b987a7839df251d2509fb91
     setOperator(op);
     setDisplayValue('0');
     setJustEvaluated(false);
   };
 
+<<<<<<< HEAD
   const showError = () => {
     setDisplayValue('Error');
+=======
+  const handleEqual = () => {
+    const a = parseFloat(firstValue);
+    const b = parseFloat(displayValue);
+    if (isNaN(a) || isNaN(b) || !operator) return;
+
+    let result = 0;
+    if (operator === '+') result = a + b;
+    if (operator === '-') result = a - b;
+    if (operator === '×') result = a * b;
+    if (operator === '÷') {
+      if (b === 0) {
+        setDisplayValue('Error');
+        setOperator(null);
+        setFirstValue('');
+        return;
+      }
+      result = a / b;
+    }
+    setDisplayValue(String(parseFloat(result.toFixed(10))));
+>>>>>>> 00eeebba7c3564391b987a7839df251d2509fb91
     setOperator(null);
     setFirstValue('');
   };
 
+<<<<<<< HEAD
   const handleEqual = () => {
     const num1 = parseFloat(firstValue);
     const num2 = parseFloat(displayValue);
@@ -96,6 +140,8 @@ export default function App() {
     setJustEvaluated(true);
   };
 
+=======
+>>>>>>> 00eeebba7c3564391b987a7839df251d2509fb91
   const handleClear = () => {
     setDisplayValue('0');
     setOperator(null);
@@ -157,10 +203,42 @@ export default function App() {
     );
   };
 
+  const handleDelete = () => {
+    if (displayValue === 'Error' || displayValue.length <= 1) {
+      setDisplayValue('0');
+    } else {
+      setDisplayValue(displayValue.slice(0, -1));
+    }
+  };
+
+  const handlePercent = () => {
+    if (displayValue === 'Error') return;
+    setDisplayValue(String(parseFloat(displayValue) / 100));
+  };
+
+  const handlePress = (key) => {
+    if (key === 'C') return handleClear();
+    if (key === '⌫') return handleDelete();
+    if (key === '%') return handlePercent();
+    if (key === '=') return handleEqual();
+    if (OPS.includes(key)) return handleOperator(key);
+    return handleNumber(key);
+  };
+
+  const getStyle = (key) => {
+    if (key === 'C') return styles.clearBtn;
+    if (key === '⌫' || key === '%') return styles.fnBtn;
+    if (key === '=') return styles.equalBtn;
+    if (OPS.includes(key)) return styles.opBtn;
+    if (key === '0') return styles.zeroBtn;
+    return null;
+  };
+
   return (
     <SafeAreaView style={styles.stage}>
       <StatusBar barStyle="dark-content" backgroundColor="#BFBCB4" />
 
+<<<<<<< HEAD
       <View style={styles.body}>
         {/* LCD display */}
         <View style={styles.display}>
@@ -180,12 +258,37 @@ export default function App() {
             </View>
           ))}
         </View>
+=======
+      <View style={styles.displayContainer}>
+        <Text style={styles.subText}>
+          {firstValue} {operator}
+        </Text>
+   <Text style={styles.displayText} numberOfLines={1}>          {displayValue}
+        </Text>
+      </View>
+
+      <View style={styles.keypad}>
+        {ROWS.map((row, i) => (
+          <View key={i} style={styles.row}>
+            {row.map((key) => (
+              <TouchableOpacity
+                key={key}
+                style={[styles.btn, getStyle(key)]}
+                onPress={() => handlePress(key)}
+              >
+                <Text style={styles.btnText}>{key}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+>>>>>>> 00eeebba7c3564391b987a7839df251d2509fb91
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+<<<<<<< HEAD
   stage: {
     flex: 1,
     backgroundColor: '#BFBCB4',
@@ -216,10 +319,16 @@ const styles = StyleSheet.create({
     marginBottom: 22,
     borderRadius: 6,
     backgroundColor: '#B7C1A6',
+=======
+  container: { flex: 1, backgroundColor: '#0F172A', justifyContent: 'flex-end' },
+  displayContainer: {
+    padding: 24,
+>>>>>>> 00eeebba7c3564391b987a7839df251d2509fb91
     alignItems: 'flex-end',
     borderTopWidth: 3,
     borderTopColor: '#8E9880',
   },
+<<<<<<< HEAD
   expr: {
     minHeight: 22,
     fontSize: 15,
@@ -253,4 +362,25 @@ const styles = StyleSheet.create({
     fontSize: 21,
     fontWeight: '500',
   },
+=======
+  subText: { fontSize: 24, color: '#2DD4BF', marginBottom: 6 },
+  displayText: { fontSize: 64, color: '#F8FAFC', fontWeight: '300' },
+  keypad: { padding: 12 },
+  row: { flexDirection: 'row', marginBottom: 4 },
+  btn: {
+    flex: 1,
+    height: 72,
+    margin: 6,
+    borderRadius: 36,
+    backgroundColor: '#1E293B',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  btnText: { color: '#F8FAFC', fontSize: 28, fontWeight: '500' },
+  zeroBtn: { flex: 2 },
+  opBtn: { backgroundColor: '#8B5CF6' },
+  fnBtn: { backgroundColor: '#334155' },
+  clearBtn: { backgroundColor: '#F43F5E' },
+  equalBtn: { backgroundColor: '#14B8A6' },
+>>>>>>> 00eeebba7c3564391b987a7839df251d2509fb91
 });
