@@ -3,347 +3,254 @@ import {
   StyleSheet,
   Text,
   View,
-  TouchableOpacity,
+  Pressable,
   SafeAreaView,
-  StatusBar
+  StatusBar,
 } from 'react-native';
 
-const kind = (key) => {
+const ROWS = [
+  ['AC', 'DEL', '%', '÷'],
+  ['7', '8', '9', '×'],
+  ['4', '5', '6', '-'],
+  ['1', '2', '3', '+'],
+  ['0', '.', '='],
+];
+
+const OPS = ['+', '-', '×', '÷'];
+
+const kindOf = (key) => {
   if (key === 'AC') return 'clear';
   if (key === '=') return 'equals';
-  if (key in OPS) return 'op';
+  if (OPS.includes(key)) return 'op';
   if (key === 'DEL' || key === '%') return 'fn';
   return 'num';
 };
 
-const CSS = `
-.calc-stage {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: #BFBCB4;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
-.calc-body {
-  width: 100%;
-  max-width: 340px;
-  padding: 22px 20px 24px;
-  border-radius: 10px;
-  background: #DAD8D1;
-  box-shadow:
-    0 1px 0 #F4F2EC inset,
-    0 -3px 0 #B9B6AD inset,
-    0 24px 40px -12px rgba(40, 36, 28, 0.45),
-    0 3px 0 #A9A69D;
-}
-.calc-display {
-  padding: 14px 16px 12px;
-  margin-bottom: 22px;
-  border-radius: 4px;
-  background: #B7C1A6;
-  color: #1D2319;
-  text-align: right;
-  box-shadow: 0 2px 5px rgba(29, 35, 25, 0.35) inset, 0 1px 0 #F4F2EC;
-  overflow: hidden;
-}
-.calc-expr {
-  min-height: 22px;
-  font-size: 15px;
-  letter-spacing: 0.04em;
-  color: #4C5744;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-variant-numeric: tabular-nums;
-}
-.calc-result {
-  margin-top: 2px;
-  font-size: 44px;
-  font-weight: 300;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-variant-numeric: tabular-nums;
-}
-.calc-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-.calc-key {
-  height: 58px;
-  border: none;
-  border-radius: 8px;
-  font: inherit;
-  font-size: 21px;
-  font-weight: 500;
-  cursor: pointer;
-  color: var(--ink);
-  background: var(--face);
-  box-shadow: 0 4px 0 var(--edge), 0 6px 8px rgba(40, 36, 28, 0.25);
-  transform: translateY(0);
-  transition: transform 70ms ease-out, box-shadow 70ms ease-out;
-}
-.calc-key:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 var(--edge), 0 2px 3px rgba(40, 36, 28, 0.25);
-}
-.calc-key:focus-visible {
-  outline: 3px solid #1D2319;
-  outline-offset: 3px;
-}
-.calc-key[data-kind="num"]    { --face: #F3F1EB; --edge: #B3B0A6; --ink: #25241F; }
-.calc-key[data-kind="fn"]     { --face: #A8A69E; --edge: #7C7A72; --ink: #25241F; }
-.calc-key[data-kind="op"]     { --face: #3B3A36; --edge: #1B1A18; --ink: #F3F1EB; font-size: 24px; }
-.calc-key[data-kind="clear"]  { --face: #E4572E; --edge: #A63A19; --ink: #FFF6EE; font-size: 18px; }
-.calc-key[data-kind="equals"] { --face: #F2B705; --edge: #B08500; --ink: #25241F; grid-column: span 2; font-size: 26px; }
-@media (prefers-reduced-motion: reduce) {
-  .calc-key { transition: none; }
-}
-`;
+const PALETTE = {
+  num: { face: '#F3F1EB', edge: '#B3B0A6', ink: '#25241F' },
+  fn: { face: '#A8A69E', edge: '#7C7A72', ink: '#25241F' },
+  op: { face: '#3B3A36', edge: '#1B1A18', ink: '#F3F1EB' },
+  clear: { face: '#E4572E', edge: '#A63A19', ink: '#FFF6EE' },
+  equals: { face: '#F2B705', edge: '#B08500', ink: '#25241F' },
+};
+
+const compute = (a, b, op) => {
+  if (op === '+') return a + b;
+  if (op === '-') return a - b;
+  if (op === '×') return a * b;
+  if (op === '÷') return b === 0 ? null : a / b;
+  return b;
+};
+
+const format = (n) => String(parseFloat(n.toPrecision(12)));
 
 export default function App() {
   const [displayValue, setDisplayValue] = useState('0');
   const [operator, setOperator] = useState(null);
   const [firstValue, setFirstValue] = useState('');
+  const [justEvaluated, setJustEvaluated] = useState(false);
 
-  // Handle number presses
   const handleNumber = (num) => {
-    if (displayValue === '0') {
-      setDisplayValue(num);
-    } else {
-      setDisplayValue(displayValue + num);
+    if (displayValue === 'Error' || justEvaluated) {
+      setDisplayValue(num === '.' ? '0.' : num);
+      setJustEvaluated(false);
+      return;
     }
+    if (num === '.') {
+      if (!displayValue.includes('.')) setDisplayValue(displayValue + '.');
+      return;
+    }
+    setDisplayValue(displayValue === '0' ? num : displayValue + num);
   };
 
-<<<<<<< HEAD
-  return (
-    <div className="calc-stage">
-      <style>{CSS}</style>
-      <div className="calc-body">
-        <div className="calc-display" role="status" aria-live="polite">
-          <div className="calc-expr">{expr}</div>
-          <div className="calc-result">{result}</div>
-        </div>
-
-        <div className="calc-grid">
-          {KEYS.map((key) => (
-            <button
-              key={key}
-              className="calc-key"
-              data-kind={kind(key)}
-              onClick={() => press(key)}
-            >
-              {key}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-=======
-  // Handle operator presses (+, -, *, /)
   const handleOperator = (op) => {
+    if (displayValue === 'Error') return;
+    // chain operations: 2 + 3 + ... evaluates 2 + 3 first
+    if (operator && firstValue !== '' && !justEvaluated && displayValue !== '0') {
+      const r = compute(parseFloat(firstValue), parseFloat(displayValue), operator);
+      if (r === null) return showError();
+      setFirstValue(format(r));
+    } else {
+      setFirstValue(displayValue);
+    }
     setOperator(op);
-    setFirstValue(displayValue);
     setDisplayValue('0');
+    setJustEvaluated(false);
   };
 
-  // Calculate the final answer
-  const handleEqual = () => {
-    const num1 = parseFloat(firstValue);
-    const num2 = parseFloat(displayValue);
-
-    if (isNaN(num1) || isNaN(num2) || !operator) return;
-
-    let result = 0;
-    if (operator === '+') result = num1 + num2;
-    if (operator === '-') result = num1 - num2;
-    if (operator === '×') result = num1 * num2;
-    if (operator === '÷') {
-      if (num2 === 0) {
-        setDisplayValue('Error');
-        setOperator(null);
-        setFirstValue('');
-        return;
-      }
-      result = num1 / num2;
-    }
-
-    setDisplayValue(String(result));
+  const showError = () => {
+    setDisplayValue('Error');
     setOperator(null);
     setFirstValue('');
   };
 
-  // Clear everything
+  const handleEqual = () => {
+    const num1 = parseFloat(firstValue);
+    const num2 = parseFloat(displayValue);
+    if (isNaN(num1) || isNaN(num2) || !operator) return;
+    const r = compute(num1, num2, operator);
+    if (r === null) return showError();
+    setDisplayValue(format(r));
+    setOperator(null);
+    setFirstValue('');
+    setJustEvaluated(true);
+  };
+
   const handleClear = () => {
     setDisplayValue('0');
     setOperator(null);
     setFirstValue('');
+    setJustEvaluated(false);
+  };
+
+  const handleDelete = () => {
+    if (displayValue === 'Error' || justEvaluated) return handleClear();
+    setDisplayValue(displayValue.length > 1 ? displayValue.slice(0, -1) : '0');
+  };
+
+  const handlePercent = () => {
+    if (displayValue === 'Error') return;
+    setDisplayValue(format(parseFloat(displayValue) / 100));
+  };
+
+  const press = (key) => {
+    if (key === 'AC') return handleClear();
+    if (key === 'DEL') return handleDelete();
+    if (key === '%') return handlePercent();
+    if (key === '=') return handleEqual();
+    if (OPS.includes(key)) return handleOperator(key);
+    return handleNumber(key);
+  };
+
+  const renderKey = (key) => {
+    const kind = kindOf(key);
+    const c = PALETTE[kind];
+    return (
+      <Pressable
+        key={key}
+        onPress={() => press(key)}
+        accessibilityRole="button"
+        accessibilityLabel={key}
+        style={({ pressed }) => [
+          styles.key,
+          kind === 'equals' && styles.keyWide,
+          {
+            backgroundColor: c.face,
+            borderBottomColor: c.edge,
+            borderBottomWidth: pressed ? 1 : 5,
+            marginTop: pressed ? 4 : 0,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.keyText,
+            { color: c.ink },
+            kind === 'clear' && { fontSize: 18 },
+            kind === 'op' && { fontSize: 24 },
+            kind === 'equals' && { fontSize: 26 },
+          ]}
+        >
+          {key}
+        </Text>
+      </Pressable>
+    );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={styles.stage}>
+      <StatusBar barStyle="dark-content" backgroundColor="#BFBCB4" />
 
-      {/* Screen Display */}
-      <View style={styles.displayContainer}>
-        <Text style={styles.subText}>
-          {firstValue} {operator}
-        </Text>
-        <Text style={styles.displayText} numberOfLines={1}>
-          {displayValue}
-        </Text>
-      </View>
-
-      {/* Keypad Grid */}
-      <View style={styles.keypad}>
-        {/* Row 1 */}
-        <View style={styles.row}>
-          <TouchableOpacity style={[styles.btn, styles.clearBtn]} onPress={handleClear}>
-            <Text style={styles.clearBtnText}>C</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, styles.opBtn]} onPress={() => handleOperator('÷')}>
-            <Text style={styles.opBtnText}>÷</Text>
-          </TouchableOpacity>
+      <View style={styles.body}>
+        {/* LCD display */}
+        <View style={styles.display}>
+          <Text style={styles.expr} numberOfLines={1}>
+            {firstValue ? `${firstValue} ${operator || ''}` : ' '}
+          </Text>
+          <Text style={styles.result} numberOfLines={1} adjustsFontSizeToFit>
+            {displayValue}
+          </Text>
         </View>
 
-        {/* Row 2 */}
-        <View style={styles.row}>
-          <TouchableOpacity style={styles.btn} onPress={() => handleNumber('7')}>
-            <Text style={styles.btnText}>7</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.btn} onPress={() => handleNumber('8')}>
-            <Text style={styles.btnText}>8</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.btn} onPress={() => handleNumber('9')}>
-            <Text style={styles.btnText}>9</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, styles.opBtn]} onPress={() => handleOperator('×')}>
-            <Text style={styles.opBtnText}>×</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Row 3 */}
-        <View style={styles.row}>
-          <TouchableOpacity style={styles.btn} onPress={() => handleNumber('4')}>
-            <Text style={styles.btnText}>4</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.btn} onPress={() => handleNumber('5')}>
-            <Text style={styles.btnText}>5</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.btn} onPress={() => handleNumber('6')}>
-            <Text style={styles.btnText}>6</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, styles.opBtn]} onPress={() => handleOperator('-')}>
-            <Text style={styles.opBtnText}>-</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Row 4 */}
-        <View style={styles.row}>
-          <TouchableOpacity style={styles.btn} onPress={() => handleNumber('1')}>
-            <Text style={styles.btnText}>1</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.btn} onPress={() => handleNumber('2')}>
-            <Text style={styles.btnText}>2</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.btn} onPress={() => handleNumber('3')}>
-            <Text style={styles.btnText}>3</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, styles.opBtn]} onPress={() => handleOperator('+')}>
-            <Text style={styles.opBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Row 5 */}
-        <View style={styles.row}>
-          <TouchableOpacity style={[styles.btn, styles.zeroBtn]} onPress={() => handleNumber('0')}>
-            <Text style={styles.btnText}>0</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.btn} onPress={() => handleNumber('.')}>
-            <Text style={styles.btnText}>.</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, styles.equalBtn]} onPress={handleEqual}>
-            <Text style={styles.equalBtnText}>=</Text>
-          </TouchableOpacity>
+        {/* Keypad */}
+        <View>
+          {ROWS.map((row, i) => (
+            <View key={i} style={styles.row}>
+              {row.map(renderKey)}
+            </View>
+          ))}
         </View>
       </View>
     </SafeAreaView>
->>>>>>> 48ce54c72c1e0fb4839cd68b5ab7d2a09cd27ac4
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  stage: {
     flex: 1,
-    backgroundColor: '#17181A',
-    justifyContent: 'flex-end',
-  },
-  displayContainer: {
+    backgroundColor: '#BFBCB4',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
+  },
+  body: {
+    width: '100%',
+    maxWidth: 340,
+    paddingTop: 22,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderRadius: 14,
+    backgroundColor: '#DAD8D1',
+    borderBottomWidth: 4,
+    borderBottomColor: '#A9A69D',
+    elevation: 10,
+    shadowColor: '#28241C',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+  },
+  display: {
+    paddingTop: 14,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    marginBottom: 22,
+    borderRadius: 6,
+    backgroundColor: '#B7C1A6',
     alignItems: 'flex-end',
-    justifyContent: 'flex-end',
-    flex: 1,
+    borderTopWidth: 3,
+    borderTopColor: '#8E9880',
   },
-  subText: {
-    fontSize: 24,
-    color: '#71757A',
-    marginBottom: 5,
+  expr: {
+    minHeight: 22,
+    fontSize: 15,
+    letterSpacing: 0.6,
+    color: '#4C5744',
   },
-  displayText: {
-    fontSize: 56,
-    color: '#FFFFFF',
+  result: {
+    marginTop: 2,
+    fontSize: 44,
     fontWeight: '300',
-  },
-  keypad: {
-    padding: 15,
+    color: '#1D2319',
+    width: '100%',
+    textAlign: 'right',
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
     marginBottom: 12,
   },
-  btn: {
-    backgroundColor: '#2E2F38',
-    width: 72,
-    height: 72,
-    borderRadius: 24,
+  key: {
+    flex: 1,
+    height: 58,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  btnText: {
-    color: '#FFFFFF',
-    fontSize: 26,
+  keyWide: {
+    flex: 2,
+  },
+  keyText: {
+    fontSize: 21,
     fontWeight: '500',
-  },
-  zeroBtn: {
-    width: 156,
-    alignItems: 'center',
-  },
-  opBtn: {
-    backgroundColor: '#4B5EFC',
-  },
-  opBtnText: {
-    color: '#FFFFFF',
-    fontSize: 28,
-  },
-  clearBtn: {
-    backgroundColor: '#A5A5A5',
-    width: 240,
-  },
-  clearBtnText: {
-    color: '#000000',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  equalBtn: {
-    backgroundColor: '#4B5EFC',
-  },
-  equalBtnText: {
-    color: '#FFFFFF',
-    fontSize: 28,
   },
 });
